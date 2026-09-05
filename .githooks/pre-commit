@@ -1,0 +1,19 @@
+#!/bin/sh
+# Pre-commit hook: block commits containing secrets or non-permissive licenses.
+# Enable once with:  git config core.hooksPath .githooks
+cd "$(git rev-parse --show-toplevel)"
+
+echo "[pre-commit] secret scan…"
+node scripts/check-secrets.js || {
+  echo "[pre-commit] BLOCKED: possible secrets detected (see above)."
+  exit 1
+}
+
+echo "[pre-commit] license audit…"
+node scripts/check-licenses.js || {
+  echo "[pre-commit] BLOCKED: non-permissive license detected (see above)."
+  exit 1
+}
+
+echo "[pre-commit] OK"
+exit 0

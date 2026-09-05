@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EVT://TERMINAL — EV Market Monitor</title>
+<meta name="description" content="Bloomberg-style ASCII EV stock monitoring terminal. Real-time feed with offline deterministic DEMO fallback.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Crect x='2' y='2' width='12' height='3' fill='%23F28C00'/%3E%3Ctext x='2' y='13' font-family='monospace' font-size='8' fill='%2300C176'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/src/frontend/styles/theme.css">
+<link rel="stylesheet" href="/src/frontend/styles/grid.css">
+<link rel="stylesheet" href="/src/frontend/styles/panels.css">
+<link rel="stylesheet" href="/src/frontend/styles/analytics.css">
+<script type="module" src="/src/frontend/main.js"></script>
+</head>
+<body>
+<div id="app">
+  <header class="masthead">
+    <div class="brand">EVT://TERMINAL<span class="cursor">▮</span></div>
+    <div class="head-right">
+      <span class="badge" id="alert-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="alert-pop" style="cursor:pointer;user-select:none">✧ ALERTS <b id="alert-count" style="color:var(--amber)"></b></span>
+      <span class="badge" id="tk-btn" style="cursor:pointer;user-select:none">TRACKERS ▾</span>
+      <span class="badge" id="cards-btn" style="cursor:pointer;user-select:none">CARDS ▾</span>
+      <span class="badge" id="conn-badge" role="status" aria-live="polite">● CONNECTING…</span>
+      <button class="ftab" id="hc-toggle" aria-pressed="false" title="high-contrast / colorblind-safe palette">◐ CONTRAST</button>
+      <span id="clock">--:--:--</span><span id="clock-sub"></span>
+    </div>
+    <div class="cards-pop" id="cards-pop" role="dialog" aria-label="Show or hide cards">
+      <div class="cp-title">SHOW / HIDE CARDS</div>
+      <div id="cards-list"></div>
+      <button class="reset" id="cards-reset">RESET LAYOUT</button>
+    </div>
+    <div class="cards-pop" id="alert-pop" role="dialog" aria-label="Create price alerts">
+      <div class="cp-title">CREATE ALERT</div>
+      <div class="tkf al-form">
+        <input id="al-sym" placeholder="SYM" maxlength="10" title="tracked symbol">
+        <select id="al-cond" title="condition">
+          <option value="above">Crosses Above</option>
+          <option value="below">Crosses Below</option>
+          <option value="pctup">Daily % Change &gt;</option>
+        </select>
+        <input id="al-val" type="number" step="0.01" placeholder="220.00" title="trigger value">
+      </div>
+      <button class="addbtn" id="al-add">＋ CREATE ALERT</button>
+      <div class="hint" id="al-hint"></div>
+      <label class="row" style="margin-top:6px"><input type="checkbox" id="al-chime" checked style="accent-color:var(--amber)"> audio chime on trigger</label>
+      <div class="cp-title" style="margin-top:8px">ACTIVE (tick-evaluated)</div>
+      <div id="al-active" style="max-height:120px;overflow-y:auto"></div>
+      <div class="cp-title" style="margin-top:8px">TRIGGERED HISTORY</div>
+      <div id="al-hist" style="max-height:150px;overflow-y:auto"></div>
+      <button class="reset" id="al-clear">CLEAR HISTORY</button>
+    </div>
+    <div class="cards-pop" id="tk-pop" role="dialog" aria-label="Manage tracked symbols">
+      <div class="cp-title">REMOVE TRACKER</div>
+      <div id="tk-list" style="max-height:240px;overflow-y:auto"></div>
+      <div class="cp-title" style="margin-top:8px">ADD TRACKER</div>
+      <div class="tkf">
+        <input id="tk-sym" placeholder="SYM" maxlength="10" title="symbol, up to 10 chars (A-Z 0-9 . - ^)">
+        <input id="tk-name" placeholder="Company name">
+        <select id="tk-sector" title="sector"><option value="PURE">PURE-PLAY EV</option><option value="BATT">BATTERY & TECH</option></select>
+        <input id="tk-last" type="number" step="0.01" min="0.01" placeholder="last" title="last price USD">
+        <input id="tk-pct" type="number" step="0.01" placeholder="chg%" title="day change %">
+      </div>
+      <button class="addbtn" id="tk-add">＋ ADD TRACKER</button>
+      <div class="hint" id="tk-hint"></div>
+      <button class="reset" id="tk-reset">RESET TRACKERS</button>
+    </div>
+  </header>
+
+  <div class="tape-wrap"><div class="tape-inner" id="tape"></div></div>
+
+  <main class="grid">
+
+    <section class="panel" id="p-tick">
+      <div class="ph"><span class="pnum">01</span><span class="ptitle">GLOBAL TICKER · MACRO + EV UNIVERSE</span><span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
+      <div class="pb">
+        <div style="margin-bottom:6px"><input id="tk-search" type="search" placeholder="filter symbol / name — press /" aria-label="Filter ticker table by symbol or name" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:10.5px;padding:3px 6px"></div>
+        <table class="tk" id="tk-table">
+        <thead><tr><th>SYM</th><th>NAME</th><th>LAST</th><th>CHG</th><th>CHG%</th><th>STATE</th><th>SRC</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table></div>
+      <div class="note">click row → focus chart · fixed-width tabular columns prevent digit jitter</div>
+    </section>
+
+    <section class="panel" id="p-heat">
+      <div class="ph"><span class="pnum">02</span><span class="ptitle">STOCK TRACKING · EV UNIVERSE</span><span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
+      <div class="pb" id="heat"></div>
+      <div class="note">AREA = |CHG%| (absolute % move) · ▲ up · intensity = |chg%| / 3% · ▼ down · • flat · click tile → focus chart · hover ✕ → remove</div>
+    </section>
+
+    <section class="panel" id="p-chart">
+      <div class="ph"><span class="pnum">05</span><span class="ptitle" id="ch-title">TSLA · 60 TRADING SESSIONS</span>
+        <button class="ftab" id="tf-toggle" title="toggle Single / Multi-Timeframe view" style="margin-left:8px">VIEW: SINGLE</button>
+        <label style="margin-left:8px;font-size:9.5px;color:var(--dim);cursor:pointer;display:inline-flex;align-items:center;gap:4px;user-select:none"><input type="checkbox" id="ovl-structure" checked style="accent-color:var(--amber)"> STRUCTURE &amp; ZONES</label>
+        <button class="ftab" id="log-trade-btn" title="log the current entry / stop / target as a hypothetical paper trade" style="margin-left:8px">＋ LOG HYPOTHETICAL TRADE</button>
+        <span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
+      <div class="pb" id="chart" role="region" aria-label="Focus chart">
+        <div class="ch-readout" id="ch-readout"></div>
+        <div class="risk-bar" id="risk-bar">
+          <span class="rl">BAL $<input id="rk-bal" type="number" value="10000" step="100" min="0"></span>
+          <span class="rl">RISK <input id="rk-pct" type="number" value="1.0" step="0.1" min="0.1">%</span>
+          <span class="rl">ENTRY $<input id="rk-entry" type="number" step="0.01" min="0.01" title="auto-filled from price — drag the blue line or type"></span>
+          <span class="rl">STOP <input id="rk-atr" type="number" value="1.5" step="0.1" min="0.1">× ATR <span id="rk-atrv" style="color:var(--dim2)">—</span></span>
+          <button class="ftab" id="rk-reset" title="re-anchor entry to current price and stop to ATR multiple">RESET TO PRICE</button>
+          <span id="rk-out" aria-live="polite"></span>
+        </div>
+        <svg id="ch-svg" viewBox="0 0 820 330" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Focus chart"></svg>
+        <div class="note" style="border:none;padding:6px 0 0">
+          <span class="ch-keys"><kbd>←</kbd><kbd>→</kbd> move crosshair · <kbd>Enter</kbd> pins Inspector · <kbd>Esc</kbd> unpin</span>
+          &nbsp;·&nbsp;60 valid weekday sessions <span id="ch-range"></span> · <span id="ch-52w"></span> · no weekend/holiday filling · <span id="ch-note-mode">DEMO unadjusted fixture</span> · <span id="ch-sumvol"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="p-fin">
+      <div class="ph"><span class="pnum">06</span><span class="ptitle" id="fin-title">FINANCIALS — TSLA</span>
+        <span class="fin-tabs" id="fin-tabs">
+          <button class="ftab on" data-tab="ov">OVERVIEW</button>
+          <button class="ftab" data-tab="is">INCOME STATEMENT</button>
+          <button class="ftab" data-tab="mg">MARGINS &amp; DELIVERIES</button>
+        </span>
+        <span class="pmeta" id="fin-meta"><b>DEMO</b></span></div>
+      <div class="pb" id="fin-body"><div class="fin-hint">loading fundamentals…</div></div>
+      <div class="note">fundamentals via server — real FMP data when FMP_API_KEY is set, deterministic simulation otherwise · deliveries/shipments are modeled estimates · <span id="fin-asof"></span></div>
+    </section>
+
+    <section class="panel" id="p-jnl">
+      <div class="ph"><span class="pnum">07</span><span class="ptitle">TRADE JOURNAL &amp; BACKTEST</span><span class="pmeta" id="jnl-meta" aria-live="polite">0 logged</span></div>
+      <div class="pb" id="jnl-body">
+        <div class="jnl-metrics" id="jnl-kpis"></div>
+        <table class="fin" id="jnl-table"></table>
+      </div>
+      <div class="note">hypothetical paper trades resolved against 60-session history and live ticks · losses capped at −1R · targets captured at the 1:2 (2R) line · persisted locally</div>
+    </section>
+
+    <section class="panel" id="correlation-matrix-card">
+      <div class="ph"><span class="pnum">08</span><span class="ptitle">EV SUPPLY CHAIN &amp; COMMODITY CORRELATION</span><span class="pmeta" id="corr-meta">30-DAY ROLLING · RETURNS-BASED</span></div>
+      <div class="pb" id="corr-body"><div class="fin-hint">loading correlation series…</div></div>
+      <div class="note">Pearson r over the last 30 sessions of daily returns · green &gt; +0.6 strong co-movement · red &lt; −0.6 inverse · gray ≈ 0 uncorrelated · commodities: ALB (lithium proxy), Nickel LME, WTI crude · <span id="corr-window"></span></div>
+    </section>
+
+    <section class="panel" id="p-sect">
+      <div class="ph"><span class="pnum">03</span><span class="ptitle">SECTOR INTRADAY · NORMALIZED</span><span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
+      <div class="pb">
+        <div class="legend" id="sect-legend"></div>
+        <svg id="sect-svg" viewBox="0 0 420 170" role="img" aria-label="Sector intraday performance lines"></svg>
+        <table class="mini" id="sect-table"></table>
+      </div>
+      <div class="note">24 equal-interval pts · baseline open = 0% · equal-weight sector average · intraday path modeled between open and the live Δ% endpoint (no intraday bars) · <b id="sect-region">single-region (US-listed) demo universe</b></div>
+    </section>
+
+    <section class="panel" id="p-news">
+      <div class="ph"><span class="pnum">04</span><span class="ptitle">EV NEWS WIRE</span><span class="pmeta">DEMO WIRE — ALL HEADLINES ARE ILLUSTRATIVE FIXTURES</span></div>
+      <div class="pb" id="news"></div>
+      <div class="note">&gt; <span id="nw-count"></span> · reverse-chronological · click headline expands summary · ticker chips focus the chart</div>
+    </section>
+
+    <section class="panel" id="p-met">
+      <div class="ph"><span class="pnum">09</span><span class="ptitle">BATTERY METALS MONITOR</span><span class="pmeta">as-of 09-04 17:00 <b>DEMO</b></span></div>
+      <div class="pb">
+        <div class="met-grid" id="met-grid"></div>
+        <svg id="met-svg" viewBox="0 0 560 120" role="img" aria-label="Battery metal 60-session sparkline"></svg>
+        <div class="bth-kv" id="met-kv"></div>
+      </div>
+      <div class="note">definitions: USD per tonne, single demo desk — homogeneous units, so ratios/spreads are compatible · <b id="met-cap"></b></div>
+    </section>
+
+    <section class="panel" id="p-clk">
+      <div class="ph"><span class="pnum">10</span><span class="ptitle">MARKET PULSE · GLOBAL SESSION CLOCK</span><span class="pmeta">LIVE CLOCK · HOLIDAY STATUS UNVERIFIED</span></div>
+      <div class="pb">
+        <table class="ck" id="ck-table">
+          <thead><tr><th>MARKET</th><th>LOCAL</th><th>SESSION</th><th>STATE</th><th>NEXT</th><th>IN</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <svg id="clk-svg" viewBox="0 0 720 130" role="img" aria-label="Global market session bands with current time marker"></svg>
+      </div>
+      <div class="note">bands = regular sessions converted to display tz (America/New_York) · amber band = lunch break · orange line = NOW · weekends CLOSED · no holiday calendar bundled → holidays never inferred</div>
+    </section>
+
+    <section class="panel" id="p-map">
+      <div class="ph"><span class="pnum">11</span><span class="ptitle">GLOBAL INDEX MAP · BY REGION</span><span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
+      <div class="pb" id="map"></div>
+      <div class="note">navigational region partition — no area/distortion encoding · local time = live clock in venue tz · as-of = demo quote time</div>
+    </section>
+
+  </main>
+
+  <div id="grid-empty">ALL CARDS REMOVED · open <b>CARDS ▾</b> (top right) to restore cards or reset the layout</div>
+
+  <footer>
+    <span><b>DEMO DATA</b> — quotes, histories &amp; headlines fall back to deterministic offline fixtures when the backend is unreachable · not real market data</span>
+    <span><b>NOT ADVICE</b> — nothing here is investment advice</span>
+    <span><b>UNIVERSE</b> — pure-play EV OEMs + battery cell &amp; materials makers · 2 sectors · 60-session histories</span>
+    <span><b>LAYOUT</b> — drag card headers · ▲▼ move · ✕ remove · CARDS ▾ restore / reset · saved locally</span>
+    <span><b>TRACKERS</b> — add via TRACKERS ▾ / ± · remove via hover ✕ on table rows &amp; heatmap tiles · saved locally</span>
+  </footer>
+</div>
+</body>
+</html>

@@ -1,0 +1,57 @@
+/* analytics.css — focus chart, risk calculator, financials, journal, correlation */
+
+/* focus chart */
+.ch-readout{font-size:11px;padding:4px 6px;border:1px solid var(--line2);background:var(--panel2);margin-bottom:6px;display:flex;gap:14px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.ch-readout span i{font-style:normal;color:var(--dim)}
+#ch-svg{width:100%;height:auto;display:block}
+.inspector{position:absolute;top:8px;right:10px;background:#0e0f11f2;border:1px solid var(--amber);padding:8px 12px;font-size:11px;z-index:5;box-shadow:0 4px 20px #000c}
+.inspector h4{color:var(--amber);font-size:10px;letter-spacing:1px;margin-bottom:4px}
+.inspector .row{display:flex;gap:10px;justify-content:space-between;font-variant-numeric:tabular-nums}
+.inspector .row i{font-style:normal;color:var(--dim)}
+.ch-keys{color:var(--dim);font-size:10px}
+.ch-keys kbd{border:1px solid var(--line);padding:0 4px;border-radius:2px;font-family:inherit;font-size:9.5px}
+.riskline,.riskhit{pointer-events:stroke}
+
+/* risk calculator toolbar */
+.risk-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:10px;color:var(--dim);padding:4px 8px;border:1px solid var(--line2);background:var(--panel2);margin-bottom:6px}
+.risk-bar .rl{display:inline-flex;gap:4px;align-items:center}
+.risk-bar input{width:72px;background:var(--panel);border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:10px;padding:2px 4px}
+.risk-bar #rk-out{color:var(--dim2)}
+.risk-bar #rk-out b{color:var(--amber)}
+.risk-bar #rk-out b.down{color:var(--red)}
+
+/* shared tab buttons (chart / financials) */
+.fin-tabs{display:flex;gap:4px;margin-left:8px}
+.ftab{background:none;border:1px solid var(--line);color:var(--dim);font-family:inherit;font-size:9.5px;padding:2px 8px;cursor:pointer;letter-spacing:.5px}
+.ftab:hover{color:var(--amber)}
+.ftab.on{border-color:var(--amber-dim);color:var(--amber)}
+
+/* financials + journal shared table */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px}
+.kpi{border:1px solid var(--line2);background:var(--panel2);padding:7px 9px;position:relative}
+.kpi .l{color:var(--dim);font-size:9.5px;letter-spacing:.5px}
+.kpi .v{font-size:16px;font-weight:700;margin-top:2px;font-variant-numeric:tabular-nums}
+.kpi .s{color:var(--dim);font-size:9.5px;margin-top:1px}
+table.fin{width:100%;border-collapse:collapse;font-size:11px}
+table.fin th{color:var(--dim);font-weight:400;text-align:right;border-bottom:1px solid var(--line);padding:3px 6px}
+table.fin td{text-align:right;padding:4px 6px;border-bottom:1px solid var(--line2);font-variant-numeric:tabular-nums;white-space:nowrap}
+table.fin th:first-child,table.fin td:first-child{text-align:left}
+table.fin td.lbl{color:var(--dim)}
+table.fin tbody tr:hover{background:#131417}
+.bar-m{height:6px;background:var(--line2);position:relative;min-width:80px;width:100%}
+.bar-m i{position:absolute;left:0;top:0;bottom:0;background:var(--green)}
+.bar-m i.neg{background:var(--red)}
+.fin-hint{color:var(--dim);font-size:11px;padding:14px 4px}
+
+/* trade journal */
+.jnl-metrics{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) 200px;gap:8px;margin-bottom:10px}
+.eqsvg{width:100%;height:auto;display:block;margin-top:3px}
+table.fin td.rm{cursor:pointer;color:var(--dim);opacity:.45;font-weight:700}
+table.fin tr:hover td.rm{opacity:1}
+table.fin td.rm:hover{color:var(--red)}
+
+/* correlation matrix */
+#correlation-matrix-card table.fin td,#correlation-matrix-card table.fin th{text-align:center}
+#correlation-matrix-card table.fin td:first-child,#correlation-matrix-card table.fin th:first-child{text-align:left}
+#correlation-matrix-card table.fin td{font-weight:700;cursor:default}
+#correlation-matrix-card table.fin tbody tr:hover{background:transparent}

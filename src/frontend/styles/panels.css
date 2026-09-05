@@ -1,0 +1,88 @@
+/* panels.css — tape, ticker table, heatmap, sector, news, metals, clock, map */
+
+/* tape */
+.tape-wrap{border:1px solid var(--line);background:var(--panel);overflow:hidden;white-space:nowrap;position:relative;margin-bottom:10px}
+.tape-wrap:hover .tape-inner{animation-play-state:paused}
+.tape-inner{display:inline-flex;animation:slide 75s linear infinite;will-change:transform}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ti{display:inline-flex;gap:7px;padding:5px 16px;border-right:1px solid var(--line2);font-size:11.5px;cursor:pointer}
+.ti:hover{background:#131417}
+.ti b{color:var(--amber)}
+.ti .px{color:var(--txt)}
+.up{color:var(--green)} .down{color:var(--red)} .flat{color:var(--dim)}
+.ti em{font-style:normal;color:var(--dim);font-size:10px;border:1px solid var(--line);padding:0 4px;margin-left:2px}
+
+/* ticker table */
+table.tk{width:100%;border-collapse:collapse;font-size:11px}
+table.tk th{color:var(--dim);font-weight:400;text-align:right;border-bottom:1px solid var(--line);padding:3px 6px;position:sticky;top:0;background:var(--panel);z-index:2}
+table.tk th:first-child,table.tk td:first-child{text-align:left}
+table.tk td{text-align:right;padding:3px 6px;border-bottom:1px solid var(--line2);white-space:nowrap;font-variant-numeric:tabular-nums}
+table.tk tbody tr:hover{background:#131417;cursor:pointer}
+table.tk td.rm{width:16px;text-align:center;color:var(--dim);cursor:pointer;opacity:0;font-weight:700;padding:0}
+table.tk tbody tr:hover td.rm{opacity:1}
+table.tk td.rm:hover{color:var(--red)}
+table.tk tr.sel{background:#1a1408;outline:1px solid var(--amber-dim)}
+table.tk .cat td{color:var(--amber);font-size:10px;letter-spacing:1px;padding-top:8px;border-bottom:1px solid var(--line)}
+table.tk .src{color:var(--dim2);font-size:10px}
+
+/* heatmap */
+.hm-head{color:var(--dim);font-size:10px;letter-spacing:1px;padding:3px 0}
+.hm-head b{color:var(--amber)}
+.hm-box{position:relative;border:1px solid var(--line2)}
+.tile{position:absolute;border:1px solid #000;overflow:hidden;display:flex;flex-direction:column;justify-content:center;padding:3px 5px;line-height:1.25;cursor:pointer;min-width:0}
+.tile:hover{outline:1px solid #fff;z-index:3}
+.tile .s{font-weight:700}
+.tile .pr{font-size:10.5px;white-space:nowrap}
+.tile .pc{font-size:11px;font-weight:700;white-space:nowrap}
+.tile .tx{position:absolute;top:1px;right:3px;font-size:9px;line-height:1;color:#ffffffb0;opacity:0;cursor:pointer;z-index:2}
+.tile:hover .tx{opacity:1}
+.tile .tx:hover{color:#fff}
+
+/* sector intraday */
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:10.5px;padding:4px 0}
+.legend .sw{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px}
+#sect-svg{width:100%;height:auto;display:block}
+table.mini{width:100%;border-collapse:collapse;font-size:10.5px;margin-top:6px}
+table.mini th{color:var(--dim);font-weight:400;text-align:left;border-bottom:1px solid var(--line);padding:2px 5px}
+table.mini td{padding:2px 5px;border-bottom:1px solid var(--line2);font-variant-numeric:tabular-nums}
+
+/* news wire */
+#p-news .pb{overflow-y:auto;max-height:520px}
+.nw{border-bottom:1px solid var(--line2);padding:5px 4px;cursor:pointer}
+.nw:hover{background:#131417}
+.nw .l1{display:flex;gap:8px;align-items:baseline}
+.nw .tm{color:var(--dim);font-size:10px}
+.nw .tag{color:#000;font-size:9px;font-weight:700;padding:0 4px;letter-spacing:.5px}
+.nw .hd{color:var(--txt);font-size:11px}
+.nw.unread .hd{color:#fff}
+.nw .dot{width:5px;height:5px;background:var(--amber);border-radius:50%;display:inline-block;margin-right:2px}
+.nw .body{display:none;color:var(--dim);font-size:10.5px;padding:4px 0 2px 46px}
+.nw.open .body{display:block}
+.nw .ticks{margin-top:3px;display:flex;gap:6px;flex-wrap:wrap}
+.nw .chip{border:1px solid var(--line);color:var(--cyan);font-size:10px;padding:0 5px;cursor:pointer}
+.nw .chip:hover{border-color:var(--cyan)}
+
+/* metals monitor */
+.met-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.met{border:1px solid var(--line2);padding:7px 9px;cursor:pointer;background:var(--panel2)}
+.met:hover{border-color:var(--dim)}
+.met.sel{border-color:var(--amber)}
+.met .sym{color:var(--amber);font-weight:700;font-size:12px}
+.met .un{color:var(--dim);font-size:9.5px}
+.met .px{font-size:16px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}
+.met .ch{font-size:10.5px}
+.met .rng{color:var(--dim);font-size:9.5px;margin-top:3px}
+#met-svg{width:100%;height:auto;display:block;margin-top:8px}
+.bth-kv{color:var(--dim);font-size:10.5px;margin-top:6px}
+.bth-kv b{color:var(--txt)}
+
+/* session clock + index map */
+table.ck{width:100%;border-collapse:collapse;font-size:10.5px}
+table.ck th{color:var(--dim);font-weight:400;text-align:left;border-bottom:1px solid var(--line);padding:2px 5px}
+table.ck td{padding:2px 5px;border-bottom:1px solid var(--line2);font-variant-numeric:tabular-nums;white-space:nowrap}
+#clk-svg{width:100%;height:auto;display:block;margin-top:6px}
+.stateb{font-size:9.5px;border:1px solid var(--line);padding:0 4px;color:var(--dim)}
+.stateb.open{color:var(--green);border-color:#0b4a2f}
+.stateb.pre{color:var(--amber);border-color:var(--amber-dim)}
+.map-reg{color:var(--amber);font-size:10.5px;letter-spacing:1px;padding:6px 0 2px}
+.map-reg::before{content:'├─ '}
