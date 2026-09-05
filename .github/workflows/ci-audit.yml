@@ -1,0 +1,21 @@
+name: CI Audit
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - run: npm ci
+      - name: Run Secret Scan
+        run: node scripts/check-secrets.js
+      - name: Run License Audit
+        run: node scripts/check-licenses.js
