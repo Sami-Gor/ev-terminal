@@ -108,11 +108,6 @@ function renderClock() {
   s += `<text x="${Math.min(nowX + 3, W - 30).toFixed(1)}" y="${top - 3}" fill="#F28C00" font-size="8.5" font-family="inherit">NOW</text>`;
   $('clk-svg').innerHTML = s;
 
-  // live local-time cells of the index map
-  document.querySelectorAll('#map [data-tz]').forEach(td => {
-    const p = tzParts(td.dataset.tz);
-    td.textContent = p.hour + ':' + p.minute;
-  });
 }
 
 export function initClock() {

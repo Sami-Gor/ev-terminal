@@ -41,9 +41,6 @@ header.masthead{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;positi
 .badge.green{border-color:#0b4a2f;color:var(--green)}
 #clock{color:var(--green);font-size:13px}
 #clock-sub{color:var(--dim);font-size:10px}
-footer{margin-top:12px;border:1px solid var(--line);background:var(--panel);padding:8px 12px;color:var(--dim);font-size:10.5px;display:flex;gap:16px;flex-wrap:wrap}
-footer b{color:var(--amber)}
-
 /* alert toasts */
 #toast-wrap{position:fixed;top:14px;right:14px;z-index:300;display:flex;flex-direction:column;gap:8px;width:300px}
 .toast{background:#14120c;border:1px solid var(--amber);border-left-width:4px;padding:8px 10px;font-size:10.5px;color:var(--txt);box-shadow:0 6px 20px #000b;animation:tin .25s ease}

@@ -26,7 +26,6 @@ import * as sector from './components/sector.js';
 import * as news from './components/news.js';
 import * as metals from './components/metals.js';
 import * as clock from './components/clock.js';
-import * as indexMap from './components/index-map.js';
 import * as focusChart from './components/focus-chart.js';
 import * as financials from './components/financials.js';
 import * as journal from './components/journal.js';
@@ -48,7 +47,6 @@ heatmap.initHeatmap();
 sector.renderSector();
 news.initNews();
 metals.initMetals();
-indexMap.renderMap();
 journal.initJournal();
 setBadgeState();
 

@@ -18,8 +18,7 @@ const CARDS = [
   { id: 'p-met', name: '09 · BATTERY METALS', span: 6 },
   { id: 'p-news', name: '04 · EV NEWS WIRE', span: 12 },
   { id: 'p-clk', name: '10 · SESSION CLOCK', span: 12 },
-  { id: 'p-map', name: '11 · GLOBAL INDEX MAP', span: 12 },
-];
+ ];
 
 let order = [];
 let hidden = [];
