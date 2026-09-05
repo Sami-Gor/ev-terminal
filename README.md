@@ -1,5 +1,9 @@
 # EVT://TERMINAL
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Release](https://img.shields.io/github/v/release/Sami-Gor/ev-terminal)](https://github.com/Sami-Gor/ev-terminal/releases)
+[![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
+
 A Bloomberg-style monitoring terminal for **pure-play EV OEMs and battery manufacturers** — Tesla, Rivian, Lucid, NIO, XPeng, Li Auto, Polestar, BYD, CATL, CALB, Panasonic Energy, LG Energy Solution and Albemarle — with live WebSocket pricing, a frame-buffered render loop, multi-timeframe charts, market-structure overlays, a position-sizing calculator, a paper-trade journal, commodity correlations and price alerts.
 
 > **Disclaimer:** this project is a monitoring/analysis tool, not investment advice. Without API keys it runs on a deterministic *simulated* feed; with keys it displays real market data. Nothing here is a recommendation.

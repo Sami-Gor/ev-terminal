@@ -17,5 +17,8 @@
     "helmet": "^8.3.0",
     "ws": "^8.18.0"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }
