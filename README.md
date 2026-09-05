@@ -4,22 +4,30 @@
 [![Release](https://img.shields.io/github/v/release/Sami-Gor/ev-terminal)](https://github.com/Sami-Gor/ev-terminal/releases)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen)](https://nodejs.org/)
 
+![EVT Terminal Hero](assets/hero-dashboard.png)
+
 A Bloomberg-style monitoring terminal for **pure-play EV OEMs and battery manufacturers** — Tesla, Rivian, Lucid, NIO, XPeng, Li Auto, Polestar, BYD, CATL, CALB, Panasonic Energy, LG Energy Solution and Albemarle — with live WebSocket pricing, a frame-buffered render loop, multi-timeframe charts, market-structure overlays, a position-sizing calculator, a paper-trade journal, commodity correlations and price alerts.
 
 > **Disclaimer:** this project is a monitoring/analysis tool, not investment advice. Without API keys it runs on a deterministic *simulated* feed; with keys it displays real market data. Nothing here is a recommendation.
 
 ---
 
+![Global ticker table panel](assets/panel-preview.png)
+
 ## Features
 
-- **Live prices** — WebSocket tick fan-out with auto-reconnect; REST history/quotes via Polygon.io or FinancialModelingPrep, or a built-in deterministic simulator when no keys are set.
-- **Focus chart** — single and multi-timeframe (D / 4H / 15M) views, ZigZag swing labels (HH/HL/LH/LL), fresh supply/demand zones, draggable Entry/Stop/TP lines with live position sizing (ATR-14 based).
-- **Analytics cards** — financials (TTM KPIs, income statement, margins & deliveries), trade journal with backtest metrics (win rate, profit factor, expectancy, equity curve), EV-vs-commodity correlation matrix (30-session returns-based Pearson).
-- **Market overview** — global ticker tape and table, sector heatmap, sector intraday lines, battery-metals monitor, global session clock, index map.
-- **Alerts** — price crossings and daily-% change triggers with toast notifications, optional audio chime and a persisted history tray.
-- **Accessibility** — WCAG 2.1 AA oriented: high-contrast colorblind-safe palette (teal/vermillion) toggle, `aria-live` status regions, full keyboard operation (`Tab`, `Enter`, arrows, `Escape`, `/` to search), focus-visible rings.
+| Feature | What you get |
+|---|---|
+| **Live data engine** | WebSocket tick fan-out with auto-reconnect and frame-buffered rendering; REST history/quotes via Polygon.io or FinancialModelingPrep — or a deterministic simulated feed when no keys are set |
+| **Focus chart** | Single and multi-timeframe (D / 4H / 15M) views, ZigZag swing labels (HH/HL/LH/LL), fresh supply/demand zones, draggable Entry/Stop/TP lines with live position sizing (ATR-14 based) |
+| **Analytics cards** | Fundamentals (TTM KPIs, income statement, margins & deliveries), trade journal with backtest metrics (win rate, profit factor, expectancy, equity curve), EV-vs-commodity correlation matrix (30-session returns-based Pearson) |
+| **Market overview** | Global ticker tape and table, sector heatmap, sector intraday lines, battery-metals monitor, global session clock |
+| **Alerts** | Price crossings and daily-% change triggers with toast notifications, optional audio chime and a persisted history tray |
+| **Accessibility** | WCAG 2.1 AA oriented — high-contrast colorblind-safe palette (teal/vermillion) toggle, `aria-live` status regions, full keyboard operation (`Tab`, `Enter`, arrows, `Escape`, `/` to search), focus-visible rings |
 
-## Quickstart
+## Quick Start
+
+> **Requirement:** Node.js **>= 18.0.0** (npm ships with Node).
 
 ```bash
 git clone <your-fork-url> ev-terminal
