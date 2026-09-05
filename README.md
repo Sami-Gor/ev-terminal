@@ -50,17 +50,25 @@ Provider priority: **Polygon → FMP → simulated**. Keys are read only by `src
 public/index.html            markup only (no inline CSS/JS)
 src/frontend/
   main.js                    boot orchestrator (deterministic init order)
-  services/                  store (state), api (REST), ws-client (feed), render-scheduler (rAF)
-  components/                one module per panel (chart, heatmap, journal, alerts, …)
-  utils/                     format, indicators (ATR/zigzag/pearson), sanitize, theme, demo-engine
+  components/                15 panels/widgets: focus-chart · heatmap · ticker-table · tape ·
+                             sector · news · metals · clock · index-map-free layout ·
+                             financials · journal · correlation · alerts · trackers ·
+                             layout-manager · connection-indicator
+  services/                  store (state + bus) · api (REST) · ws-client (feed) ·
+                             render-scheduler (rAF tick buffer)
+  utils/                     format · indicators (ATR/zigzag/pearson/zones) · sanitize ·
+                             theme (colorblind palette) · demo-engine (offline fallback)
   styles/                    theme · grid · panels · analytics
 src/backend/
   config/index.js            environment & constants
-  providers/                 polygon · fmp · demo (simulated feed)
+  providers/                 demo (simulated feed) · polygon · fmp · financials
   routes/                    status · history · quote · financials
-  services/                  market-data (caching/orchestration), ttl-cache, symbol-utils
+  services/                  market-data (caching/orchestration) · ttl-cache · symbol-utils
   websocket/feed-manager.js  origin gate, per-client subscriptions, heartbeat, poller
+app + entry                  src/backend/app.js (Express assembly) · server.js (entry)
 ```
+
+*45 files total: 25 frontend JS modules, 14 backend JS modules, 4 stylesheets, plus `server.js` and `public/index.html`.*
 
 Data flow: `provider → market-data service (TTL cache) → REST/WS → store → render-scheduler (rAF) → in-place DOM patches`. Chart redraws are throttled full renders only when price escapes the rendered range; everything else patches in place.
 
