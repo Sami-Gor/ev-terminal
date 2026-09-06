@@ -21,6 +21,18 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
 /** Rate limiting for /api/*: max 100 requests per 15 minutes per IP. */
 const API_RATE_LIMIT = { windowMs: 15 * 60 * 1000, max: 100 };
 
+/** Background market polling:
+ *  USE_MOCK_DATA=true  → the mock telemetry generator refreshes the cache.
+ *  USE_MOCK_DATA=false → the external provider fetch handler runs.
+ *  unset               → auto: mock in demo mode, external when keys are set. */
+const USE_MOCK_DATA_RAW = process.env.USE_MOCK_DATA;
+const USE_MOCK_DATA = USE_MOCK_DATA_RAW === undefined || USE_MOCK_DATA_RAW === ''
+  ? (PROVIDER_MODE === 'demo')                       // auto: no keys → simulated feed
+  : USE_MOCK_DATA_RAW === 'true';
+const DEFAULT_POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) > 0
+  ? Number(process.env.POLL_INTERVAL_MS)
+  : (USE_MOCK_DATA ? 2000 : PROVIDER_MODE === 'fmp' ? 6000 : 15000);
+
 /** WebSocket hardening limits. */
 const WS_MAX_SYMBOLS_PER_CLIENT = 50;
 const WS_HEARTBEAT_MS = 30000;
@@ -31,6 +43,8 @@ module.exports = {
   FMP_KEY,
   PROVIDER_MODE,
   POLL_INTERVAL_MS,
+  USE_MOCK_DATA,
+  DEFAULT_POLL_INTERVAL_MS,
   HISTORY_TTL_MS,
   FINANCIALS_TTL_MS,
   ALLOWED_ORIGINS,

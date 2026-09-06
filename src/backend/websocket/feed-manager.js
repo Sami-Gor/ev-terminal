@@ -5,6 +5,7 @@
  *   - origin verification on upgrade (allowlist only)
  *   - max 50 tracked symbols per client socket
  *   - ping/pong heartbeat (30 s) terminates dead connections
+ *   - broadcasts cached market telemetry from the poller on every refresh
  *   - JSON-safe message parsing and generic error frames
  */
 const { WebSocketServer } = require('ws');
@@ -74,6 +75,21 @@ function init(httpServer) {
           accepted.push(sym);
         }
         safeSend(ws, { type: 'subscribed', symbols: accepted });
+        // immediate snapshot: a new subscriber gets the current cached ticks
+        // without waiting for the next poll interval
+        const cached = marketData.getCachedMarketData();
+        if (cached) {
+          for (const t of cached.tickers) {
+            if (accepted.includes(t.symbol)) {
+              safeSend(ws, {
+                type: 'tick', symbol: t.symbol, price: t.price,
+                change: Number.isFinite(t.change) ? t.change : 0,
+                percentChange: Number.isFinite(t.percentChange) ? t.percentChange : 0,
+                volume: Number.isFinite(t.volume) ? t.volume : 0,
+              });
+            }
+          }
+        }
       } else if (msg.type === 'unsubscribe') {
         const syms = normalizeSymbols(msg.symbols);
         syms.forEach(s => {
@@ -97,23 +113,19 @@ function init(httpServer) {
     });
   }, config.WS_HEARTBEAT_MS);
 
-  // tick poller → broadcast quotes to all subscribed clients
-  setInterval(pollOnce, config.POLL_INTERVAL_MS);
-}
-
-async function pollOnce() {
-  if (!globalSubscriptions.size) return;
-  try {
-    const quotes = await marketData.getQuotes([...globalSubscriptions]);
-    for (const [sym, quote] of quotes) {
-      if (!(quote.price > 0)) continue;
+  // broadcast cached market telemetry to subscribed clients on every refresh
+  marketData.onCacheUpdate(snapshot => {
+    const subs = globalSubscriptions;
+    if (!subs.size) return;
+    for (const t of snapshot.tickers) {
+      if (!subs.has(t.symbol)) continue;
       const message = JSON.stringify({
         type: 'tick',
-        symbol: sym,
-        price: quote.price,
-        change: Number.isFinite(quote.change) ? quote.change : 0,
-        percentChange: Number.isFinite(quote.percentChange) ? quote.percentChange : 0,
-        volume: Number.isFinite(quote.volume) ? quote.volume : 0,
+        symbol: t.symbol,
+        price: t.price,
+        change: Number.isFinite(t.change) ? t.change : 0,
+        percentChange: Number.isFinite(t.percentChange) ? t.percentChange : 0,
+        volume: Number.isFinite(t.volume) ? t.volume : 0,
       });
       for (const client of wss.clients) {
         if (client.readyState === 1) {
@@ -121,9 +133,7 @@ async function pollOnce() {
         }
       }
     }
-  } catch (e) {
-    console.error('[feed-manager] poll failed:', e.message);
-  }
+  });
 }
 
 function clientCount() {
