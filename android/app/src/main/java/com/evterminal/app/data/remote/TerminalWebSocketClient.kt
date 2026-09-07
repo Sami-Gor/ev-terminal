@@ -1,5 +1,7 @@
 package com.evterminal.app.data.remote
 
+import android.os.Handler
+import android.os.Looper
 import com.evterminal.app.data.model.TelemetryTick
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -30,7 +32,7 @@ enum class ConnectionState { CONNECTING, CONNECTED, CLOSING, DISCONNECTED, FAILE
  */
 class TerminalWebSocketClient(
     /** Emulator default reaches the host dev server; use wss://… in production. */
-    private val url: String = DEFAULT_URL,
+    private val url: String = NetworkModule.wsBaseUrl,
     /** Symbols subscribed on open; an empty list receives the full board. */
     private val symbols: List<String> = DEFAULT_SYMBOLS,
     /** The backend allowlists upgrade requests by Origin header. */
@@ -138,8 +140,6 @@ class TerminalWebSocketClient(
     }.getOrNull()
 
     companion object {
-        /** 10.0.2.2 is the Android emulator's alias for the host machine's loopback. */
-        const val DEFAULT_URL = "ws://10.0.2.2:3000"
         const val DEFAULT_ORIGIN = "http://localhost:3000"
         val DEFAULT_SYMBOLS = listOf("TSLA", "RIVN")
         const val NORMAL_CLOSE_CODE = 1000

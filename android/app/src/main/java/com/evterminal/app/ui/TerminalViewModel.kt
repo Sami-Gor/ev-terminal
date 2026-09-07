@@ -4,11 +4,13 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.viewModelScope
 import com.evterminal.app.data.model.NewsEvent
 import com.evterminal.app.data.model.TelemetryTick
 import com.evterminal.app.data.model.VehicleTelemetry
 import com.evterminal.app.data.remote.ConnectionState
 import com.evterminal.app.data.remote.MarketApi
+import com.evterminal.app.data.remote.NetworkModule
 import com.evterminal.app.data.remote.NewsApi
 import com.evterminal.app.data.remote.TerminalWebSocketClient
 import com.evterminal.app.ui.model.NewsItem
@@ -33,9 +35,9 @@ import kotlinx.coroutines.launch
  * disconnects on app ON_STOP; vehicle polling pauses in the background.
  */
 class TerminalViewModel(
-    private val wsClient: TerminalWebSocketClient = TerminalWebSocketClient(SERVER_URL),
-    private val marketApi: MarketApi = MarketApi(SERVER_URL),
-    private val newsApi: NewsApi = NewsApi(SERVER_URL)
+    private val wsClient: TerminalWebSocketClient = TerminalWebSocketClient(NetworkModule.wsBaseUrl),
+    private val marketApi: MarketApi = MarketApi(NetworkModule.restBaseUrl),
+    private val newsApi: NewsApi = NewsApi(NetworkModule.restBaseUrl)
 ) : ViewModel(), DefaultLifecycleObserver {
 
     /** Symbol focused via news-wire ticker chips (drives cross-panel highlighting). */
@@ -44,9 +46,12 @@ class TerminalViewModel(
 
     private val _newsEvents = MutableStateFlow<List<NewsEvent>>(emptyList())
 
-    /** Enriched news wire — conflated so intermediate un-rendered frames are dropped. */
+    /**
+     * Enriched news wire. Intermediate un-rendered frames are dropped by
+     * StateFlow's inherent conflation (an explicit .conflate() on a StateFlow
+     * is a compile error per the coroutines operator-fusion contract).
+     */
     val news: StateFlow<List<NewsItem>> = _newsEvents
-        .conflate()
         .map { events -> events.map { it.toNewsItem() } }
         .stateIn(
             scope = viewModelScope,
@@ -142,8 +147,6 @@ class TerminalViewModel(
     }
 
     companion object {
-        /** Emulator alias for the host dev server; use wss://host in production. */
-        const val SERVER_URL = "ws://10.0.2.2:3000"
         const val STOP_TIMEOUT_MS = 5_000L
         const val VEHICLE_REFRESH_MS = 15_000L
     }

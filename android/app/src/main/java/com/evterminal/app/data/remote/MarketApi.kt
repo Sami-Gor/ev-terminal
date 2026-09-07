@@ -9,7 +9,7 @@ import org.json.JSONObject
 
 /** REST access to the backend's in-memory market cache (GET /api/market). */
 class MarketApi(
-    private val baseUrl: String = DEFAULT_BASE_URL,
+    private val baseUrl: String = NetworkModule.restBaseUrl,
     private val origin: String = DEFAULT_ORIGIN,
     /** Shared singleton client — same pool/dispatcher as the WebSocket feed. */
     private val client: OkHttpClient = NetworkModule.okHttpClient
@@ -31,7 +31,6 @@ class MarketApi(
     }
 
     companion object {
-        const val DEFAULT_BASE_URL = "http://10.0.2.2:3000"
         const val DEFAULT_ORIGIN = "http://localhost:3000"
     }
 }

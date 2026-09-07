@@ -1,5 +1,6 @@
 package com.evterminal.app.data.remote
 
+import com.evterminal.app.BuildConfig
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -15,6 +16,12 @@ import java.util.concurrent.TimeUnit
  *   whose liveness is governed by the ping interval.
  */
 object NetworkModule {
+
+    /** WebSocket endpoint — debug: ws://10.0.2.2:3000, release: wss://your-domain.com. */
+    val wsBaseUrl: String = BuildConfig.WS_BASE_URL
+
+    /** REST endpoint — debug: http://10.0.2.2:3000, release: https://your-domain.com. */
+    val restBaseUrl: String = BuildConfig.REST_BASE_URL
 
     /** Thread-safe lazy singleton (SYNCHRONIZED by default). */
     val okHttpClient: OkHttpClient by lazy {

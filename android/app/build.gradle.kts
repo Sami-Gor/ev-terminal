@@ -16,8 +16,14 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "WS_BASE_URL", "\"ws://10.0.2.2:3000\"")
+            buildConfigField("String", "REST_BASE_URL", "\"http://10.0.2.2:3000\"")
+        }
         release {
             isMinifyEnabled = false
+            buildConfigField("String", "WS_BASE_URL", "\"wss://your-domain.com\"")
+            buildConfigField("String", "REST_BASE_URL", "\"https://your-domain.com\"")
         }
     }
 
@@ -32,6 +38,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
