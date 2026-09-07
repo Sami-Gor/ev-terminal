@@ -123,12 +123,11 @@ function initLayoutManager() {
   });
   $('cards-btn').addEventListener('click', e => {
     e.stopPropagation();
-    ['tk-pop', 'alert-pop', 'up-pop', 'broker-pop'].forEach(id => $(id).classList.remove('open'));
+    ['tk-pop', 'alert-pop', 'up-pop'].forEach(id => $(id).classList.remove('open'));
     $('tk-btn')?.setAttribute('aria-expanded', 'false');
     $('alert-btn')?.setAttribute('aria-expanded', 'false');
     $('up-btn')?.setAttribute('aria-expanded', 'false');
-    $('broker-btn')?.setAttribute('aria-expanded', 'false');
-    $('cards-pop').classList.toggle('open');
+        $('cards-pop').classList.toggle('open');
     $('cards-btn').setAttribute('aria-expanded', $('cards-pop').classList.contains('open') ? 'true' : 'false');
   });
   $('cards-reset').addEventListener('click', () => {

@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="/src/frontend/styles/grid.css">
 <link rel="stylesheet" href="/src/frontend/styles/panels.css">
 <link rel="stylesheet" href="/src/frontend/styles/analytics.css">
+<script>window.addEventListener("error",e=>{const d=document.createElement("div");d.id="boot-err";d.textContent="ERR "+(e.message||"?")+" @ "+String(e.filename||"").split("/").pop()+":"+e.lineno;document.body.appendChild(d)});</script>
 <script type="module" src="/src/frontend/main.js"></script>
 </head>
 <body>
@@ -19,7 +20,7 @@
     <div class="head-right">
       <span class="badge" id="alert-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="alert-pop" style="cursor:pointer;user-select:none">✧ ALERTS <b id="alert-count" style="color:var(--amber)"></b></span>
       <span class="badge" id="up-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="up-pop" style="cursor:pointer;user-select:none">⬆ UPGRADE</span>
-      <span class="badge" id="broker-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="broker-pop" style="cursor:pointer;user-select:none">BROKER ↗</span>
+      <span class="badge" id="trade-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="trade-pop" style="cursor:pointer;user-select:none">⚡ TRADE</span>
       <span class="badge" id="tk-btn" style="cursor:pointer;user-select:none">TRACKERS ▾</span>
       <span class="badge" id="cards-btn" style="cursor:pointer;user-select:none">CARDS ▾</span>
       <span class="badge" id="conn-badge" role="status" aria-live="polite">● CONNECTING…</span>
@@ -39,18 +40,25 @@
       <div class="hint" id="up-hint"></div>
       <p style="color:var(--dim);font-size:9px;margin-top:6px">No spam. Your email is stored only by the operator and never published.</p>
     </div>
-    <div class="cards-pop" id="broker-pop" role="dialog" aria-label="Broker referral">
-      <div class="cp-title">BROKER PARTNER · TRADE NATION</div>
-      <p style="color:var(--txt);font-size:10.5px;line-height:1.5;margin-bottom:8px">
-        Outbound referral link only. No account linking, no order routing, and
-        no funds-related functionality in this terminal.
-      </p>
-      <a class="addbtn" href="https://www.tradenation.com/" target="_blank" rel="noopener noreferrer nofollow sponsored" style="text-decoration:none;text-align:center;display:block">OPEN TRADE NATION ↗</a>
-      <div style="border:1px solid var(--line);background:var(--panel2);padding:8px;margin-top:8px">
-        <div style="color:var(--amber);font-size:9px;font-weight:700;letter-spacing:1px;margin-bottom:4px">RISK DISCLOSURE</div>
-        <div style="color:var(--dim);font-size:9.5px;line-height:1.5">{{TRADE_NATION_RISK_DISCLOSURE}}</div>
+    <div class="cards-pop" id="trade-pop" role="dialog" aria-label="Quick trade">
+      <div class="cp-title">QUICK TRADE · ALPACA <span class="stateb" id="qt-paper">PAPER</span></div>
+      <div id="qt-account" style="color:var(--txt);font-size:10.5px;margin-bottom:6px">—</div>
+      <div class="tkf" style="grid-template-columns:1fr 1fr 56px">
+        <input id="qt-symbol" placeholder="SYM" maxlength="10" title="tracked symbol">
+        <select id="qt-type" title="order type"><option value="market">MARKET</option><option value="limit">LIMIT</option></select>
+        <input id="qt-qty" type="number" min="0.0001" step="0.0001" placeholder="qty" title="quantity">
       </div>
-      <p style="color:var(--dim);font-size:9px;margin-top:6px">Placeholders until the partner's final compliance wording is confirmed. Not investment advice.</p>
+      <div class="tkf" id="qt-limit-row" style="grid-template-columns:1fr;display:none">
+        <input id="qt-limit" type="number" step="0.01" min="0.01" placeholder="limit price $">
+      </div>
+      <div style="display:flex;gap:6px;margin:6px 0">
+        <label class="row" style="flex:1;justify-content:center;border:1px solid var(--line);padding:4px"><input type="radio" name="qt-side" value="buy" checked> BUY</label>
+        <label class="row" style="flex:1;justify-content:center;border:1px solid var(--line);padding:4px"><input type="radio" name="qt-side" value="sell"> SELL</label>
+      </div>
+      <button class="addbtn" id="qt-submit">SUBMIT ORDER</button>
+      <div class="hint" id="qt-msg"></div>
+      <div class="cp-title" style="margin-top:8px">OPEN POSITIONS · LIVE P&amp;L</div>
+      <table class="mini" style="width:100%"><tbody id="qt-positions"></tbody></table>
     </div>
     <div class="cards-pop" id="cards-pop" role="dialog" aria-label="Show or hide cards">
       <div class="cp-title">SHOW / HIDE CARDS</div>

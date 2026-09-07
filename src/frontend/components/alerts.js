@@ -161,7 +161,7 @@ export function initAlerts() {
   updateBadge();
   $('alert-btn').addEventListener('click', e => {
     e.stopPropagation();
-    ['cards-pop', 'tk-pop', 'up-pop', 'broker-pop'].forEach(id => $(id).classList.remove('open'));
+    ['cards-pop', 'tk-pop', 'up-pop'].forEach(id => $(id).classList.remove('open'));
     $('alert-pop').classList.toggle('open');
     $('alert-btn').setAttribute('aria-expanded', $('alert-pop').classList.contains('open') ? 'true' : 'false');
     if ($('alert-pop').classList.contains('open')) {
@@ -214,7 +214,7 @@ export function initAlerts() {
     if (!e.target.closest('#alert-pop') && !e.target.closest('#alert-btn')) $('alert-pop').classList.remove('open');
   });
   document.addEventListener('click', e => {   // other popovers opening close this one
-    for (const id of ['up-pop', 'broker-pop']) {
+    for (const id of ['up-pop']) {
       const el = $(id);
       if (el && el.classList.contains('open')) $('alert-pop').classList.remove('open');
     }
