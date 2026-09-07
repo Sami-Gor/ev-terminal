@@ -15,8 +15,7 @@ const CARDS = [
   { id: 'p-fin', name: '06 · FINANCIALS', span: 12 },
   { id: 'p-jnl', name: '07 · TRADE JOURNAL', span: 12 },
   { id: 'correlation-matrix-card', name: '08 · CORRELATION MATRIX', span: 6 },
-  { id: 'p-met', name: '09 · BATTERY METALS', span: 6 },
-  { id: 'p-news', name: '04 · EV NEWS WIRE', span: 12 },
+   { id: 'p-news', name: '04 · EV NEWS WIRE', span: 12 },
   { id: 'p-clk', name: '10 · SESSION CLOCK', span: 12 },
  ];
 

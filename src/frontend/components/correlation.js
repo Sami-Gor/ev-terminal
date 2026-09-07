@@ -11,8 +11,8 @@ import { $ } from '../utils/format.js';
 const EV_SYMBOLS = ['TSLA', 'RIVN', 'NIO', 'BYDDY'];
 const COMMODITIES = [
   { sym: 'ALB', label: 'ALB · LITHIUM' },
-  { sym: 'NICK', label: 'NICKEL LME' },
-  { sym: 'WTI', label: 'WTI CRUDE' },
+  { sym: '300750.SZ', label: 'CATL · CELLS' },
+  { sym: '3931.HK', label: 'CALB · CELLS' },
 ];
 const CACHE_TTL_MS = 300000;
 

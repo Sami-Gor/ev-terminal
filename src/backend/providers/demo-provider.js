@@ -23,8 +23,6 @@ const DEFAULT_UNIVERSE = [
   { sym: 'ALB', name: 'Albemarle (lithium)', sector: 'BATT', base: 86 },
 ];
 
-const DEMO_COMMODITY_BASES = { WTI: 68, NICK: 16500, COPR: 10250, LITH: 12480, COBT: 24300 };
-
 const demoCache = new Map(); // sym → { bars, prevClose, price, volume }
 
 function hash(str) {
@@ -62,7 +60,9 @@ function demoSeries(sym) {
   if (demoCache.has(sym)) return demoCache.get(sym);
   const r = mulberry32(hash(sym + '|demo'));
   const seeded = DEFAULT_UNIVERSE.find(u => u.sym === sym);
-  let px = seeded && seeded.base ? seeded.base : DEMO_COMMODITY_BASES[sym] || Math.exp(r() * 4.6 + 0.9);
+  // Registry is EV/battery-only: universe symbols anchor to realistic bases,
+  // anything else (e.g. user-added custom trackers) gets a generic random walk.
+  let px = seeded && seeded.base ? seeded.base : Math.exp(r() * 4.6 + 0.9);
   const dates = lastWeekdays(60);
   const bars = [];
   for (let i = 0; i < 60; i++) {

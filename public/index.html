@@ -71,7 +71,7 @@
   <main class="grid">
 
     <section class="panel" id="p-tick">
-      <div class="ph"><span class="pnum">01</span><span class="ptitle">GLOBAL TICKER · MACRO + EV UNIVERSE</span><span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
+      <div class="ph"><span class="pnum">01</span><span class="ptitle">GLOBAL TICKER · EV UNIVERSE</span><span class="pmeta">as-of 09-04 16:05 <b>DEMO</b></span></div>
       <div class="pb">
         <div style="margin-bottom:6px"><input id="tk-search" type="search" placeholder="filter symbol / name — press /" aria-label="Filter ticker table by symbol or name" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:10.5px;padding:3px 6px"></div>
         <table class="tk" id="tk-table">
@@ -135,7 +135,7 @@
     <section class="panel" id="correlation-matrix-card">
       <div class="ph"><span class="pnum">08</span><span class="ptitle">EV SUPPLY CHAIN &amp; COMMODITY CORRELATION</span><span class="pmeta" id="corr-meta">30-DAY ROLLING · RETURNS-BASED</span></div>
       <div class="pb" id="corr-body"><div class="fin-hint">loading correlation series…</div></div>
-      <div class="note">Pearson r over the last 30 sessions of daily returns · green &gt; +0.6 strong co-movement · red &lt; −0.6 inverse · gray ≈ 0 uncorrelated · commodities: ALB (lithium proxy), Nickel LME, WTI crude · <span id="corr-window"></span></div>
+      <div class="note">Pearson r over the last 30 sessions of daily returns · green &gt; +0.6 strong co-movement · red &lt; −0.6 inverse · gray ≈ 0 uncorrelated · battery-chain equities: ALB (lithium producer), CATL, CALB · <span id="corr-window"></span></div>
     </section>
 
     <section class="panel" id="p-sect">
@@ -152,16 +152,6 @@
       <div class="ph"><span class="pnum">04</span><span class="ptitle">EV NEWS WIRE</span><span class="pmeta">DEMO WIRE — ALL HEADLINES ARE ILLUSTRATIVE FIXTURES</span></div>
       <div class="pb" id="news"></div>
       <div class="note">&gt; <span id="nw-count"></span> · reverse-chronological · click headline expands summary · ticker chips focus the chart</div>
-    </section>
-
-    <section class="panel" id="p-met">
-      <div class="ph"><span class="pnum">09</span><span class="ptitle">BATTERY METALS MONITOR</span><span class="pmeta">as-of 09-04 17:00 <b>DEMO</b></span></div>
-      <div class="pb">
-        <div class="met-grid" id="met-grid"></div>
-        <svg id="met-svg" viewBox="0 0 560 120" role="img" aria-label="Battery metal 60-session sparkline"></svg>
-        <div class="bth-kv" id="met-kv"></div>
-      </div>
-      <div class="note">definitions: USD per tonne, single demo desk — homogeneous units, so ratios/spreads are compatible · <b id="met-cap"></b></div>
     </section>
 
     <section class="panel" id="p-clk">

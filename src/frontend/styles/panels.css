@@ -1,4 +1,4 @@
-/* panels.css — tape, ticker table, heatmap, sector, news, metals, clock, map */
+/* panels.css — tape, ticker table, heatmap, sector, news, clock, map */
 
 /* tape */
 .tape-wrap{border:1px solid var(--line);background:var(--panel);overflow:hidden;white-space:nowrap;position:relative;margin-bottom:10px}
@@ -61,20 +61,6 @@ table.mini td{padding:2px 5px;border-bottom:1px solid var(--line2);font-variant-
 .nw .ticks{margin-top:3px;display:flex;gap:6px;flex-wrap:wrap}
 .nw .chip{border:1px solid var(--line);color:var(--cyan);font-size:10px;padding:0 5px;cursor:pointer}
 .nw .chip:hover{border-color:var(--cyan)}
-
-/* metals monitor */
-.met-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
-.met{border:1px solid var(--line2);padding:7px 9px;cursor:pointer;background:var(--panel2)}
-.met:hover{border-color:var(--dim)}
-.met.sel{border-color:var(--amber)}
-.met .sym{color:var(--amber);font-weight:700;font-size:12px}
-.met .un{color:var(--dim);font-size:9.5px}
-.met .px{font-size:16px;font-weight:700;margin:2px 0;font-variant-numeric:tabular-nums}
-.met .ch{font-size:10.5px}
-.met .rng{color:var(--dim);font-size:9.5px;margin-top:3px}
-#met-svg{width:100%;height:auto;display:block;margin-top:8px}
-.bth-kv{color:var(--dim);font-size:10.5px;margin-top:6px}
-.bth-kv b{color:var(--txt)}
 
 /* session clock + index map */
 table.ck{width:100%;border-collapse:collapse;font-size:10.5px}

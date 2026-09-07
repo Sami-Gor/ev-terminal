@@ -4,7 +4,7 @@
  * main.js can re-render all panels and resync subscriptions.
  */
 import {
-  SECTORS, MACRO, universe,
+  SECTORS, universe,
   initTracker, addTrackerRecord, removeTrackerRecord, resetTrackers, saveTrackers,
 } from '../services/store.js';
 import { bus } from '../services/store.js';
@@ -46,7 +46,7 @@ async function addTracker() {
   const typedLast = parseFloat($('tk-last').value);
   const typedPct = parseFloat($('tk-pct').value);
   if (!sym) { flash('symbol: up to 10 chars (A-Z 0-9 . - ^)'); return; }
-  if (universe.some(t => t.sym === sym) || MACRO.some(m => m.sym === sym)) { flash(sym + ' is already tracked'); return; }
+  if (universe.some(t => t.sym === sym)) { flash(sym + ' is already tracked'); return; }
   flash('validating ' + sym + ' against backend…');
   let profile = null;
   try {
