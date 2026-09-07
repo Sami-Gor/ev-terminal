@@ -1,12 +1,13 @@
 'use strict';
 
 /**
- * WebSocket feed manager (hardened):
- *   - origin verification on upgrade (allowlist only)
- *   - max 50 tracked symbols per client socket
+ * WebSocket broadcast hub (hardened):
+ *   - managed client registry (Map) with clean disconnect handling
+ *   - origin verification at the HTTP upgrade handshake (allowlist only)
+ *   - immediate cache snapshot to every newly connected client (no cold start)
+ *   - onCacheUpdate → tick broadcast to all OPEN, subscribed clients
+ *   - per-client subscription cap (50 symbols)
  *   - ping/pong heartbeat (30 s) terminates dead connections
- *   - broadcasts cached market telemetry from the poller on every refresh
- *   - JSON-safe message parsing and generic error frames
  */
 const { WebSocketServer } = require('ws');
 const config = require('../config');
@@ -14,9 +15,13 @@ const marketData = require('../services/market-data');
 const { okSymbol } = require('../services/symbol-utils');
 
 let wss = null;
-const globalSubscriptions = new Set();
 
-const HEARTBEAT_OK = Symbol('heartbeat-ok');
+/**
+ * Managed registry of active client connections.
+ *   ws → { subscriptions: Set<sym>, alive: bool }
+ */
+const clients = new Map();
+const globalSubscriptions = new Set();
 
 function originAllowed(origin) {
   if (!origin) return false;                       // same-origin browsers send Origin; reject missing
@@ -31,7 +36,38 @@ function normalizeSymbols(raw) {
 
 function safeSend(ws, payload) {
   if (ws.readyState === 1) {
-    try { ws.send(JSON.stringify(payload)); } catch (e) { /* socket dying — heartbeat will reap it */ }
+    try { ws.send(JSON.stringify(payload)); } catch (e) { dropClient(ws); }
+  }
+}
+
+/** Remove a socket from the registry and prune orphaned global subscriptions. */
+function dropClient(ws) {
+  const info = clients.get(ws);
+  clients.delete(ws);
+  if (info) {
+    for (const sym of info.subscriptions) {
+      const stillWanted = [...clients.values()].some(c => c !== ws && c.subscriptions.has(sym));
+      if (!stillWanted) globalSubscriptions.delete(sym);
+    }
+  }
+}
+
+/**
+ * Push the latest cached ticks to one client (cold-start elimination).
+ * A client with no explicit subscriptions receives the full board; after any
+ * subscribe/unsubscribe it receives only its subscribed symbols.
+ */
+function sendSnapshot(ws, info) {
+  const cached = marketData.getCachedMarketData();
+  if (!cached) return;
+  for (const t of cached.tickers) {
+    if (info.subscriptions.size && !info.subscriptions.has(t.symbol)) continue;
+    safeSend(ws, {
+      type: 'tick', symbol: t.symbol, price: t.price,
+      change: Number.isFinite(t.change) ? t.change : 0,
+      percentChange: Number.isFinite(t.percentChange) ? t.percentChange : 0,
+      volume: Number.isFinite(t.volume) ? t.volume : 0,
+    });
   }
 }
 
@@ -49,95 +85,82 @@ function init(httpServer) {
   wss = new WebSocketServer({ noServer: true, maxPayload: 4096 });
 
   wss.on('connection', (ws, req) => {
-    if (!originAllowed(req.headers.origin)) {           // defense in depth
+    if (!originAllowed(req.headers.origin)) {        // defense in depth
       ws.close(1008, 'Origin not allowed');
       return;
     }
-    ws.isAlive = true;
-    ws.clientSubscriptions = new Set();
-    ws.on('pong', () => { ws.isAlive = true; });
+
+    // register in the managed client registry
+    clients.set(ws, { subscriptions: new Set(), alive: true });
+    ws.on('pong', () => { const info = clients.get(ws); if (info) info.alive = true; });
+
+    // cold-start elimination: latest cache snapshot immediately on connect
+    sendSnapshot(ws, clients.get(ws));
 
     ws.on('message', raw => {
-      ws.isAlive = true;
+      const info = clients.get(ws);
+      if (!info) return;                             // unregistered socket — ignore
+      info.alive = true;
       let msg;
       try { msg = JSON.parse(raw); } catch (e) { safeSend(ws, { type: 'error', error: 'Malformed message' }); return; }
+
       if (msg.type === 'subscribe') {
         const requested = normalizeSymbols(msg.symbols);
         const accepted = [];
         for (const sym of requested) {
-          if (ws.clientSubscriptions.has(sym)) { accepted.push(sym); continue; }
-          if (ws.clientSubscriptions.size >= config.WS_MAX_SYMBOLS_PER_CLIENT) {
+          if (info.subscriptions.has(sym)) { accepted.push(sym); continue; }
+          if (info.subscriptions.size >= config.WS_MAX_SYMBOLS_PER_CLIENT) {
             safeSend(ws, { type: 'error', error: `Subscription limit reached (max ${config.WS_MAX_SYMBOLS_PER_CLIENT} symbols)` });
             continue;
           }
-          ws.clientSubscriptions.add(sym);
+          info.subscriptions.add(sym);
           globalSubscriptions.add(sym);
           accepted.push(sym);
         }
         safeSend(ws, { type: 'subscribed', symbols: accepted });
-        // immediate snapshot: a new subscriber gets the current cached ticks
-        // without waiting for the next poll interval
-        const cached = marketData.getCachedMarketData();
-        if (cached) {
-          for (const t of cached.tickers) {
-            if (accepted.includes(t.symbol)) {
-              safeSend(ws, {
-                type: 'tick', symbol: t.symbol, price: t.price,
-                change: Number.isFinite(t.change) ? t.change : 0,
-                percentChange: Number.isFinite(t.percentChange) ? t.percentChange : 0,
-                volume: Number.isFinite(t.volume) ? t.volume : 0,
-              });
-            }
-          }
-        }
+        sendSnapshot(ws, info);                      // snapshot covering the new symbols
       } else if (msg.type === 'unsubscribe') {
         const syms = normalizeSymbols(msg.symbols);
-        syms.forEach(s => {
-          ws.clientSubscriptions.delete(s);
-          const stillWanted = [...wss.clients].some(c => c !== ws && c.clientSubscriptions && c.clientSubscriptions.has(s));
-          if (!stillWanted) globalSubscriptions.delete(s);
-        });
+        syms.forEach(s => info.subscriptions.delete(s));
         safeSend(ws, { type: 'unsubscribed', symbols: syms });
       } else {
         safeSend(ws, { type: 'error', error: 'Unsupported message type' });
       }
     });
+
+    // clean disconnect: remove from the registry and prune orphaned symbols
+    ws.on('close', () => dropClient(ws));
+    ws.on('error', () => { try { ws.close(); } catch (e) { /* already closed */ } });
   });
 
   // heartbeat: terminate dead sockets every WS_HEARTBEAT_MS
   setInterval(() => {
-    wss.clients.forEach(ws => {
-      if (ws.isAlive === false) { ws.terminate(); return; }
-      ws.isAlive = false;
+    for (const [ws, info] of clients) {
+      if (!info.alive) { ws.terminate(); clients.delete(ws); continue; }
+      info.alive = false;
       try { ws.ping(); } catch (e) { ws.terminate(); }
-    });
+    }
   }, config.WS_HEARTBEAT_MS);
 
-  // broadcast cached market telemetry to subscribed clients on every refresh
+  // market-data cache refresh → broadcast to all OPEN registered clients
   marketData.onCacheUpdate(snapshot => {
-    const subs = globalSubscriptions;
-    if (!subs.size) return;
-    for (const t of snapshot.tickers) {
-      if (!subs.has(t.symbol)) continue;
-      const message = JSON.stringify({
-        type: 'tick',
-        symbol: t.symbol,
-        price: t.price,
-        change: Number.isFinite(t.change) ? t.change : 0,
-        percentChange: Number.isFinite(t.percentChange) ? t.percentChange : 0,
-        volume: Number.isFinite(t.volume) ? t.volume : 0,
-      });
-      for (const client of wss.clients) {
-        if (client.readyState === 1) {
-          try { client.send(message); } catch (e) { /* reaped by heartbeat */ }
-        }
+    for (const [ws, info] of clients) {
+      if (ws.readyState !== 1) continue;             // OPEN only
+      for (const t of snapshot.tickers) {
+        if (info.subscriptions.size && !info.subscriptions.has(t.symbol)) continue;  // subscribed → only their symbols
+        safeSend(ws, {
+          type: 'tick', symbol: t.symbol, price: t.price,
+          change: Number.isFinite(t.change) ? t.change : 0,
+          percentChange: Number.isFinite(t.percentChange) ? t.percentChange : 0,
+          volume: Number.isFinite(t.volume) ? t.volume : 0,
+        });
       }
     }
   });
 }
 
 function clientCount() {
-  return wss ? wss.clients.size : 0;
+  return clients.size;
 }
 
 function subscribedSymbols() {
