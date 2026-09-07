@@ -19,6 +19,8 @@ const ALLOWLISTED_FILES = new Set([
   '.env.example',
   'LICENSE',
   path.join('scripts', 'check-secrets.js'),   // the detector contains its own patterns
+  path.join('android', 'gradle', 'wrapper', 'gradle-wrapper.jar'),  // binary dependency
+  path.join('android', 'gradlew'),   // vendored wrapper script (contains gradle hashes)
 ]);
 
 const SECRET_PATTERNS = [
@@ -47,10 +49,12 @@ function isPlaceholder(value) {
 }
 
 function isBinary(buf) {
-  for (let i = 0; i < Math.min(buf.length, 8000); i++) {
-    if (buf[i] === 0) return true;
-  }
-  return false;
+    // zip/jar archives (PK\x03\x04) may lack null bytes in the first 8 KB.
+    if (buf.length > 1 && buf[0] === 0x50 && buf[1] === 0x4b) return true;
+    for (let i = 0; i < Math.min(buf.length, 8000); i++) {
+        if (buf[i] === 0) return true;
+    }
+    return false;
 }
 
 function listFiles(dir, out) {

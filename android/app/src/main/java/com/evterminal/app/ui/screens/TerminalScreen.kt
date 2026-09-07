@@ -8,13 +8,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.evterminal.app.ui.TerminalViewModel
 import com.evterminal.app.ui.components.ConnectionBadge
+import com.evterminal.app.ui.components.EvNewsWireCard
+import com.evterminal.app.ui.components.NewsEngineStatusHeader
 import com.evterminal.app.ui.components.SectionHeader
 import com.evterminal.app.ui.components.TickerCard
 import com.evterminal.app.ui.components.VehicleHudCard
@@ -31,6 +37,11 @@ fun TerminalScreen(viewModel: TerminalViewModel, modifier: Modifier = Modifier) 
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val board by viewModel.board.collectAsStateWithLifecycle()
     val vehicles by viewModel.vehicles.collectAsStateWithLifecycle()
+    val news by viewModel.news.collectAsStateWithLifecycle()
+    val selectedSymbol by viewModel.selectedSymbol.collectAsStateWithLifecycle()
+
+    // Sort once per board change (remembered), not on every recomposition.
+    val sortedSymbols = remember(board) { board.keys.sorted() }
 
     Column(
         modifier = modifier
@@ -46,8 +57,8 @@ fun TerminalScreen(viewModel: TerminalViewModel, modifier: Modifier = Modifier) 
             Text(
                 "EVT://TERMINAL",
                 color = TextPrimary,
-                fontSize = androidx.compose.ui.unit.TextUnit(18f, androidx.compose.ui.unit.TextUnitType.Sp),
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
             )
             ConnectionBadge(connectionState)
         }
@@ -57,10 +68,10 @@ fun TerminalScreen(viewModel: TerminalViewModel, modifier: Modifier = Modifier) 
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             item { SectionHeader("STOCK TICKERS · REAL-TIME") }
-            val sorted = board.entries.sortedBy { it.key }
-            items(sorted.size) { index ->
-                val (symbol, tick) = sorted[index]
-                TickerCard(tick.copy(symbol = symbol))
+            // Stable symbol keys let LazyColumn reuse and skip rows across updates.
+            items(sortedSymbols.size, key = { sortedSymbols[it] }) { index ->
+                val symbol = sortedSymbols[index]
+                board[symbol]?.let { tick -> TickerCard(tick) }
             }
             item { SectionHeader("EV TELEMETRY HUD · FLEET") }
             if (vehicles.isEmpty()) {
