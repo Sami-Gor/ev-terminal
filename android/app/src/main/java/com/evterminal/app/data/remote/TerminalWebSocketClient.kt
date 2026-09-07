@@ -1,5 +1,6 @@
 package com.evterminal.app.data.remote
 
+import com.evterminal.app.data.model.TelemetryTick
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -12,15 +13,6 @@ import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
-
-/** A single price tick broadcast by the EVT://TERMINAL feed. */
-data class TelemetryTick(
-    val symbol: String,
-    val price: Double,
-    val change: Double,
-    val percentChange: Double,
-    val volume: Double
-)
 
 enum class ConnectionState { CONNECTING, CONNECTED, CLOSING, DISCONNECTED, FAILED }
 
@@ -124,13 +116,7 @@ class TerminalWebSocketClient(
     private fun parseTick(text: String): TelemetryTick? = runCatching {
         val obj = JSONObject(text)
         if (obj.optString("type") != "tick") return@runCatching null
-        TelemetryTick(
-            symbol = obj.getString("symbol"),
-            price = obj.getDouble("price"),
-            change = obj.getDouble("change"),
-            percentChange = obj.getDouble("percentChange"),
-            volume = obj.getDouble("volume")
-        )
+        TelemetryTick.fromJson(obj)
     }.getOrNull()
 
     companion object {
