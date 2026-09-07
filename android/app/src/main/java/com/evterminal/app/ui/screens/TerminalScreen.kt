@@ -73,7 +73,21 @@ fun TerminalScreen(viewModel: TerminalViewModel, modifier: Modifier = Modifier) 
                     )
                 }
             }
-            items(vehicles.size) { index -> VehicleHudCard(vehicles[index]) }
+            // Stable vehicleId keys keep HUD cards identity-stable across refreshes.
+            items(vehicles.size, key = { vehicles[it].vehicleId }) { index ->
+                VehicleHudCard(vehicles[index])
+            }
+            item { NewsEngineStatusHeader() }
+            item { SectionHeader("EV NEWS WIRE · CORRELATED") }
+            // Timestamp keys: newest-first ordering stays identity-stable.
+            items(news.size, key = { news[it].timestamp }) { index ->
+                val item = news[index]
+                EvNewsWireCard(
+                    item = item,
+                    selectedSymbol = selectedSymbol,
+                    onChipClick = viewModel::onTickerChipClick
+                )
+            }
             item {
                 Text(
                     "simulated/provider feed · not investment advice",

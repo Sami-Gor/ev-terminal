@@ -14,6 +14,7 @@ const historyRoutes = require('./routes/history.routes');
 const quoteRoutes = require('./routes/quote.routes');
 const financialsRoutes = require('./routes/financials.routes');
 const marketRoutes = require('./routes/market.routes');
+const newsRoutes = require('./routes/news.routes');
 
 const app = express();
 app.disable('x-powered-by');
@@ -67,6 +68,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/quote', quoteRoutes);
 app.use('/api/financials', financialsRoutes);
 app.use('/api/market', marketRoutes);
+app.use('/api/news', newsRoutes);
 
 /* ---- sanitized error handling: never leak stacks, provider details or keys - */
 app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars

@@ -6,6 +6,8 @@
  * the offline fallback for quote/financial lookups.
  */
 const { PROVIDER_MODE } = require('../config');
+const { NewsEvent } = require('../model/NewsModel');
+const { enrichHeadline } = require('../services/NewsCorrelationEngine');
 
 const DEFAULT_UNIVERSE = [
   { sym: 'TSLA', name: 'Tesla Inc', sector: 'PURE', base: 245 },
@@ -198,12 +200,52 @@ function demoFinancials(sym) {
   };
 }
 
+/* ---------------- mock news wire (enriched by NewsCorrelationEngine) ----- */
+
+const RAW_NEWS = [
+  { time: '16:30:01', headline: 'XPeng ADRs slide as demo delivery figures miss estimates — DEMO WIRE', summary: 'Demo tape: XPEV declines on a soft monthly figure; peers hold modest gains.' },
+  { time: '16:15:00', headline: 'Lithium slips as slower EV ramp tempers spot demand — DEMO WIRE', summary: 'Demo metals: carbonate offers ease and spodumune weakness returns on the desk.' },
+  { time: '16:00:02', headline: 'Closing bell: battery names lead tape as a delivery beat lifts pure-plays — DEMO WIRE', summary: 'Advancers lead decliners into the finish; cell makers top the most-active board on the demo sample.' },
+  { time: '15:42:11', headline: 'Momentum EV names extend gains; late-day rotation into pure-play makers — DEMO WIRE', summary: 'XPeng and NIO ADRs firm into the close and outpace the broader demo complex.' },
+  { time: '15:05:48', headline: 'Lithium carbonate spot firms on restocking chatter; spodumune quotes follow — DEMO WIRE', summary: 'Battery-grade lithium marked higher for a third session; converters cite steady cathode orders.' },
+  { time: '14:02:07', headline: 'Solid-state watch: pilot-line yields improve per supply-chain checks — DEMO WIRE', summary: 'Demo note flags incremental progress at pre-commercial lines; next-gen chemistry names bid.' },
+  { time: '12:15:44', headline: 'Midday: EV sector breadth improves; lagging ADR complex turns positive — DEMO WIRE', summary: 'Halfway mark on the demo tape: the pure-play cohort recovers early losses.' },
+  { time: '11:52:19', headline: 'Cathode order leads stretch into Q4; LFP cell quotes edge higher — DEMO WIRE', summary: 'Demo supply-chain tracker shows continued LFP momentum across passenger EV programs.' },
+  { time: '09:30:01', headline: 'US cash open: EV names little changed after mixed overnight session — DEMO WIRE', summary: 'Demo open: flat start for the EV universe; battery names pre-market leaders.' },
+  { time: '08:55:23', headline: 'Asia session review: NEV wholesale estimates revised higher for the month — DEMO WIRE', summary: 'Demo Asia desk: China NEV run-rate lifts sentiment across the ADR complex.' },
+  { time: '07:31:05', headline: 'Overnight digest: separator and electrolyte pricing stable per checks — DEMO WIRE', summary: 'Demo supply chain: input costs ex-lithium remain well-behaved.' },
+  { time: '07:02:44', headline: 'Week in review: EV tape climbs wall of worry into month-end — DEMO WIRE', summary: 'Demo weekly: EV universe outpaces broad benchmarks on the demo sample.' },
+  { time: '06:15:09', headline: 'Asia close: EV platform cohort outperforms; delivery-day catalysts ahead — DEMO WIRE', summary: 'Demo Asia close: platform-economy strength spills into NEV names.' },
+];
+
+let newsCache = null;
+
+/** Mock news wire — raw headlines enriched by the topic-correlation engine. */
+function demoNews() {
+  if (newsCache) return newsCache;
+  const today = new Date().toISOString().slice(0, 10);
+  newsCache = RAW_NEWS
+    .map((raw, i) => {
+      const enriched = enrichHeadline(raw);
+      return new NewsEvent({
+        id: `news-${i + 1}`,
+        timestamp: `${today}T${raw.time}Z`,
+        headline: raw.headline,
+        summary: raw.summary,
+        ...enriched,
+      }).toJSON();
+    })
+    .sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  return newsCache;
+}
+
 module.exports = {
   DEFAULT_UNIVERSE,
   demoHistory,
   demoQuote,
   demoTick,
   demoFinancials,
+  demoNews,
   intradayBars,
   simDeliveries,
   demoSeries,
