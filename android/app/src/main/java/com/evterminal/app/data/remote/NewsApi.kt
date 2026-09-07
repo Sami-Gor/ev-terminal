@@ -6,15 +6,13 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 /** REST access to the enriched news wire (GET /api/news). */
 class NewsApi(
     private val baseUrl: String = DEFAULT_BASE_URL,
     private val origin: String = DEFAULT_ORIGIN,
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .callTimeout(10, TimeUnit.SECONDS)
-        .build()
+    /** Shared singleton client — same pool/dispatcher as the WebSocket feed. */
+    private val client: OkHttpClient = NetworkModule.okHttpClient
 ) {
 
     /** Fetches the enriched news list; null on any network/parse failure. */
