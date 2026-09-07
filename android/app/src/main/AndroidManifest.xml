@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Required for the OkHttp WebSocket feed and connectivity awareness. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <application
+        android:label="EVT Terminal"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true">
+        <!-- usesCleartextTraffic allows the ws:// dev endpoint (10.0.2.2:3000 from the
+             emulator). Production builds should use wss:// and drop this flag. -->
+    </application>
+
+</manifest>
