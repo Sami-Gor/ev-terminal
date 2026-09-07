@@ -22,6 +22,10 @@ coverage/
 tmp/
 *.tmp
 
+# Upgrade-interest captures (real user emails — never commit)
+var/
+data/upgrade-interest.*
+
 # Android
 android/.gradle/
 android/build/

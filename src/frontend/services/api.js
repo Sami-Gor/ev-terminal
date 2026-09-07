@@ -2,7 +2,7 @@
  * api.js — REST service layer. All network calls flow through here;
  * components never call fetch() directly.
  */
-import { bus, setConnection, finalizeFromHistory, chartState } from './store.js';
+import { bus, setConnection, connection, finalizeFromHistory, chartState } from './store.js';
 
 import { DATES, genHist } from '../utils/demo-engine.js';
 
@@ -81,8 +81,30 @@ function connectionProvider() {
   return 'demo';
 }
 
+/**
+ * Resolves the server's public configuration (distribution mode, upgrade hook,
+ * broker referral block). Called once at boot before the UI settles labels.
+ */
+export async function fetchAppConfig() {
+  try {
+    const cfg = await fetchJson(`${API_BASE}/api/config`);
+    setConnection({
+      restOk: true,
+      provider: cfg.dataMode === 'simulated' ? 'demo' : connectionProvider(),
+      distributionMode: cfg.distributionMode || 'local',
+      broker: cfg.broker || null,
+      upgradeInterestEnabled: cfg.upgradeInterestEnabled !== false,
+    });
+    return cfg;
+  } catch (e) {
+    setConnection({});                       // offline → deterministic demo
+    return null;
+  }
+}
+
 /** Staggered boot fetch: histories first, then quotes. */
 export function scheduleInitialLoads(universe) {
+  fetchAppConfig();
   universe.forEach((t, i) => setTimeout(() => ensureHistory(t), i * 150));
   setTimeout(() => {
     universe.forEach((t, i) => setTimeout(() => ensureQuote(t), i * 200));

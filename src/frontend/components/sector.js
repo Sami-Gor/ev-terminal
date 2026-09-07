@@ -4,7 +4,7 @@
  */
 import { SECTORS, universe } from '../services/store.js';
 import { $, fnum, fchg, fpct, ARROW, CLS } from '../utils/format.js';
-import { intradayPath } from '../utils/indicators.js';
+import { intradayPath } from '../utils/indicators.mjs';
 import { rngFor } from '../utils/demo-engine.js';
 import { upColor } from '../utils/theme.js';
 

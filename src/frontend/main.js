@@ -32,6 +32,8 @@ import * as correlation from './components/correlation.js';
 import * as alerts from './components/alerts.js';
 import * as trackers from './components/trackers.js';
 import { initLayout, applyLayout } from './components/layout-manager.js';
+import { initUpgradeBanner } from './components/upgrade-banner.js';
+import { initBrokerLink } from './components/broker-link.js';
 
 /* ---- boot (wrapped: a failed init reports to the DOM instead of dying) ---- */
 function boot() {
@@ -58,6 +60,8 @@ initLayout();                   // needs rendered panels; re-applies persisted o
 trackers.initTrackers();        // inserts ± tools into rendered card headers
 focusChart.initChartControls();
 alerts.initAlerts();
+initUpgradeBanner();
+initBrokerLink();
 correlation.initCorrelation();
 clock.initClock();
 
@@ -112,10 +116,10 @@ onTickMessage(symbol => {
 document.addEventListener('keydown', e => {
   const typing = /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName || '');
   if (e.key === 'Escape') {
-    const open = ['cards-pop', 'tk-pop', 'alert-pop'].find(id => $(id).classList.contains('open'));
+    const open = ['cards-pop', 'tk-pop', 'alert-pop', 'up-pop', 'broker-pop'].find(id => $(id).classList.contains('open'));
     if (open) {
       $(open).classList.remove('open');
-      const trigger = { 'cards-pop': 'cards-btn', 'tk-pop': 'tk-btn', 'alert-pop': 'alert-btn' }[open];
+      const trigger = { 'cards-pop': 'cards-btn', 'tk-pop': 'tk-btn', 'alert-pop': 'alert-btn', 'up-pop': 'up-btn', 'broker-pop': 'broker-btn' }[open];
       $(trigger)?.setAttribute('aria-expanded', 'false');
       e.stopImmediatePropagation();              // don't also unpin the chart crosshair
       $(trigger)?.focus();

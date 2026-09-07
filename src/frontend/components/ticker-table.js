@@ -16,7 +16,7 @@ export function renderTickerTable() {
     universe.filter(t => t.sector === key).forEach(t => {
       h += `<tr data-sym="${esc(t.sym)}" class="urow" tabindex="0" aria-label="${esc(t.sym)}, ${esc(t.name)}, last ${fnum(t.last)}, ${fpct(t.pct)}. Press Enter to open chart" role="button"><td><b>${esc(t.sym)}</b></td><td>${esc(t.name)}</td><td>${fnum(t.last)}</td>` +
         `<td class="${CLS(t.pct)}">${ARROW(t.pct)} ${fchg(t.chg)}</td><td class="${CLS(t.pct)}">${fpct(t.pct)}</td>` +
-        `<td><span class="stateb ${connection.live ? 'open' : ''}">${connection.live ? 'LIVE' : 'CLOSED'}</span></td>` +
+        `<td><span class="stateb ${connection.live ? 'open' : ''}">${connection.simulated ? 'SIM' : connection.live ? 'LIVE' : 'CLOSED'}</span></td>` +
         `<td class="src">${connection.dataSrc}</td>` +
         `<td class="rm" data-rm="${esc(t.sym)}" title="remove ${esc(t.sym)} from trackers">✕</td></tr>`;
     });

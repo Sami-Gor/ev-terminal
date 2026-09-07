@@ -9,8 +9,11 @@ const router = express.Router();
 
 router.get('/', (req, res) => {
   res.json({
+    distributionMode: config.DISTRIBUTION_MODE,
     provider: config.PROVIDER_MODE,
-    mode: config.PROVIDER_MODE === 'demo' ? 'simulated' : 'live-keys',
+    // Honest mode reporting: a distributed (public) build ALWAYS reports
+    // simulated — even if vendor keys happen to sit unused in the env.
+    mode: config.PROVIDER_MODE === 'demo' || config.FORCE_SIMULATED ? 'simulated' : 'live-keys',
     wsClients: feedManager.clientCount(),
     subscribed: feedManager.subscribedSymbols(),
     defaultUniverse: marketData.defaultUniverse().map(u => u.sym),

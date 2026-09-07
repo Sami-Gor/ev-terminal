@@ -4,7 +4,7 @@
  */
 import { getTracker } from '../services/store.js';
 import { API_BASE, fetchJson } from '../services/api.js';
-import { pearson, returnsN } from '../utils/indicators.js';
+import { pearson, returnsN } from '../utils/indicators.mjs';
 import { upRgb, downRgb } from '../utils/theme.js';
 import { $ } from '../utils/format.js';
 

@@ -6,7 +6,7 @@ import { SECTORS, universe } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { removeTracker } from './trackers.js';
 import { $, fnum, fpct, ARROW, CLS } from '../utils/format.js';
-import { tmLayout } from '../utils/indicators.js';
+import { tmLayout } from '../utils/indicators.mjs';
 import { upRgb, downRgb } from '../utils/theme.js';
 import { esc } from '../utils/sanitize.js';
 

@@ -18,11 +18,39 @@
     <div class="brand">EVT://TERMINAL<span class="cursor">▮</span></div>
     <div class="head-right">
       <span class="badge" id="alert-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="alert-pop" style="cursor:pointer;user-select:none">✧ ALERTS <b id="alert-count" style="color:var(--amber)"></b></span>
+      <span class="badge" id="up-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="up-pop" style="cursor:pointer;user-select:none">⬆ UPGRADE</span>
+      <span class="badge" id="broker-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="broker-pop" style="cursor:pointer;user-select:none">BROKER ↗</span>
       <span class="badge" id="tk-btn" style="cursor:pointer;user-select:none">TRACKERS ▾</span>
       <span class="badge" id="cards-btn" style="cursor:pointer;user-select:none">CARDS ▾</span>
       <span class="badge" id="conn-badge" role="status" aria-live="polite">● CONNECTING…</span>
       <button class="ftab" id="hc-toggle" aria-pressed="false" title="high-contrast / colorblind-safe palette">◐ CONTRAST</button>
       <span id="clock">--:--:--</span><span id="clock-sub"></span>
+    </div>
+    <div class="cards-pop" id="up-pop" role="dialog" aria-label="Upgrade to real prices">
+      <div class="cp-title">REAL-TIME &amp; DELAYED PRICES</div>
+      <div style="margin-bottom:8px"><span class="stateb">COMING SOON — NOT YET LIVE</span></div>
+      <p style="color:var(--txt);font-size:11px;line-height:1.5;margin-bottom:8px">
+        The terminal currently runs on a deterministic <b>simulated engine</b>.
+        Live and delayed market data require a licensed business-tier data
+        agreement — planned as a <b>paid upgrade</b>, not part of this release.
+      </p>
+      <input id="up-email" type="email" placeholder="you@example.com" aria-label="Email for upgrade notification" style="width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);font-family:inherit;font-size:10.5px;padding:4px 6px;margin-bottom:6px">
+      <button class="addbtn" id="up-cta">NOTIFY ME AT LAUNCH</button>
+      <div class="hint" id="up-hint"></div>
+      <p style="color:var(--dim);font-size:9px;margin-top:6px">No spam. Your email is stored only by the operator and never published.</p>
+    </div>
+    <div class="cards-pop" id="broker-pop" role="dialog" aria-label="Broker referral">
+      <div class="cp-title">BROKER PARTNER · TRADE NATION</div>
+      <p style="color:var(--txt);font-size:10.5px;line-height:1.5;margin-bottom:8px">
+        Outbound referral link only. No account linking, no order routing, and
+        no funds-related functionality in this terminal.
+      </p>
+      <a class="addbtn" href="https://www.tradenation.com/" target="_blank" rel="noopener noreferrer nofollow sponsored" style="text-decoration:none;text-align:center;display:block">OPEN TRADE NATION ↗</a>
+      <div style="border:1px solid var(--line);background:var(--panel2);padding:8px;margin-top:8px">
+        <div style="color:var(--amber);font-size:9px;font-weight:700;letter-spacing:1px;margin-bottom:4px">RISK DISCLOSURE</div>
+        <div style="color:var(--dim);font-size:9.5px;line-height:1.5">{{TRADE_NATION_RISK_DISCLOSURE}}</div>
+      </div>
+      <p style="color:var(--dim);font-size:9px;margin-top:6px">Placeholders until the partner's final compliance wording is confirmed. Not investment advice.</p>
     </div>
     <div class="cards-pop" id="cards-pop" role="dialog" aria-label="Show or hide cards">
       <div class="cp-title">SHOW / HIDE CARDS</div>

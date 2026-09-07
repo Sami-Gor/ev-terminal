@@ -159,6 +159,8 @@ export const connection = {
   restOk: false,
   wsOk: false,
   provider: 'demo',
+  distributionMode: 'local',      // resolved from GET /api/config at boot
+  simulated: true,                // provider demo OR public distribution mode
   dataSrc: 'US demo ref',
 };
 
@@ -166,8 +168,11 @@ export const connection = {
 export function setConnection(patch) {
   Object.assign(connection, patch);
   connection.live = connection.wsOk || connection.restOk;
+  // Simulated engine = the demo provider itself, OR a public distribution
+  // where vendor integrations are disabled at the config layer.
+  connection.simulated = connection.distributionMode === 'public' || connection.provider === 'demo';
   connection.dataSrc = connection.live
-    ? (connection.provider === 'demo' ? 'server sim feed' : connection.provider + ' feed')
+    ? (connection.simulated ? 'simulated feed' : connection.provider + ' feed')
     : 'US demo ref';
   bus.emit('connection');
 }
