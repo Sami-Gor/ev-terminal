@@ -88,7 +88,7 @@ export function initTrackers() {
   });
   $('tk-btn').addEventListener('click', e => {
     e.stopPropagation();
-    ['cards-pop', 'alert-pop'].forEach(id => { $(id).classList.remove('open'); $(id.replace('tk-pop','tk-btn'))?.setAttribute('aria-expanded','false'); });
+    ['cards-pop', 'alert-pop', 'up-pop', 'broker-pop'].forEach(id => { $(id).classList.remove('open'); $(id.replace('tk-pop','tk-btn'))?.setAttribute('aria-expanded','false'); });
     $('tk-pop').classList.toggle('open');
     $('tk-btn').setAttribute('aria-expanded', $('tk-pop').classList.contains('open') ? 'true' : 'false');
   });
@@ -103,7 +103,7 @@ export function initTrackers() {
     tools.insertAdjacentHTML('beforeend', '<button class="tbtn" data-act="tk" title="add / remove trackers">±</button>');
     tools.querySelector('[data-act="tk"]').addEventListener('click', e => {
       e.stopPropagation();
-      ['cards-pop', 'alert-pop'].forEach(pid => $(pid).classList.remove('open'));
+      ['cards-pop', 'alert-pop', 'up-pop', 'broker-pop'].forEach(pid => $(pid).classList.remove('open'));
       $('tk-pop').classList.toggle('open');
     });
   });

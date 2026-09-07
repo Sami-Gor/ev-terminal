@@ -13,6 +13,8 @@ const statusRoutes = require('./routes/status.routes');
 const historyRoutes = require('./routes/history.routes');
 const quoteRoutes = require('./routes/quote.routes');
 const financialsRoutes = require('./routes/financials.routes');
+const configRoutes = require('./routes/config.routes');
+const upgradeInterestRoutes = require('./routes/upgrade-interest.routes');
 const marketRoutes = require('./routes/market.routes');
 const newsRoutes = require('./routes/news.routes');
 
@@ -58,6 +60,7 @@ const apiLimiter = rateLimit({
 app.use('/api', apiLimiter);
 
 /* ---- static hosting -------------------------------------------------------- */
+app.use(express.json({ limit: '16kb' }));   // upgrade-interest capture bodies
 app.use(express.static(path.join(__dirname, '..', '..', 'public')));
 app.use('/src/frontend', express.static(path.join(__dirname, '..', '..', 'src', 'frontend')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', '..', 'public', 'index.html')));
@@ -67,6 +70,8 @@ app.use('/api/status', statusRoutes);
 app.use('/api/history', historyRoutes);
 app.use('/api/quote', quoteRoutes);
 app.use('/api/financials', financialsRoutes);
+app.use('/api/config', configRoutes);
+app.use('/api/upgrade-interest', upgradeInterestRoutes);
 app.use('/api/market', marketRoutes);
 app.use('/api/news', newsRoutes);
 

@@ -56,6 +56,21 @@ cp .env.example .env
 
 Provider priority: **Polygon → FMP → simulated**. Keys are read only by `src/backend/config`; they are never sent to the browser or written to logs.
 
+## Data sources & distribution mode
+
+**The distributed app ships on a deterministic simulated engine — that is the v1.0 product.** Real-time and delayed market data are a *planned paid upgrade*: market-data vendors (Polygon, FMP) prohibit distributing an application built on individual-tier keys, so live data unlocks only after a business-tier data agreement.
+
+| `DISTRIBUTION_MODE` | Behavior |
+|---|---|
+| `local` (default) | Developer's own single-user run. Personal Polygon/FMP keys via `.env` work (provider priority: Polygon → FMP → simulated). Not for distribution. |
+| `public` | Shipped build: locked to the simulated engine. Vendor keys in the environment are ignored, no key-entry surface is exposed, and `/api/status` honestly reports `mode: "simulated"`. |
+
+The UI reflects this: simulated runs badge **`● SIMULATED ENGINE`** (amber, never a green "LIVE"), and a header **⬆ UPGRADE** hook captures email interest for the future paid tier (stored server-side in a git-ignored file, never committed). A **BROKER ↗** popover carries a static outbound referral link to Trade Nation with a risk-disclosure placeholder (`{{TRADE_NATION_RISK_DISCLOSURE}}`) — no OAuth, no order routing, no account linking.
+
+## The `android/` directory and `ANDROID_PERFORMANCE_AUDIT.md`
+
+`android/` is a **native Kotlin companion client** (not a WebView wrapper): an OkHttp WebSocket client + ViewModel consume the same Node feed, and a Jetpack Compose dashboard renders tickers, an EV-fleet telemetry HUD and the news wire. It shares the backend's protocol (subscribe payload, tick schema) and licensing posture. `ANDROID_PERFORMANCE_AUDIT.md` documents that module's performance, state-hygiene and recomposition audit — lazy-list keys, flow conflation, process-lifecycle socket gating — and the fixes applied against it.
+
 ## Architecture
 
 ```

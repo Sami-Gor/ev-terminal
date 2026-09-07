@@ -7,7 +7,7 @@ import { chartState, getTracker } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { API_BASE, fetchJson } from '../services/api.js';
 import { DATES } from '../utils/demo-engine.js';
-import { atr14, structurePivots, detectZones } from '../utils/indicators.js';
+import { atr14, structurePivots, detectZones } from '../utils/indicators.mjs';
 import { $, fnum, fchg, fpct, fvol, fmtBig, ARROW, CLS } from '../utils/format.js';
 import { upColor, downColor, upRgb, downRgb } from '../utils/theme.js';
 

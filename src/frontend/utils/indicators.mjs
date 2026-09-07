@@ -59,8 +59,10 @@ export function detectZones(bars) {
     if (Math.abs(bar.c - bar.o) < avgRange * 2) continue;
     const demand = bar.c > bar.o;
     const baseIdx = i - 1;
-    const lo = Math.min(bars[baseIdx].l, bar.l);
-    const hi = Math.max(bars[baseIdx].h, bar.h);
+    // Order block = the base candle's range alone. Extending it with the
+    // expansion candle made fresh zones practically impossible to persist.
+    const lo = bars[baseIdx].l;
+    const hi = bars[baseIdx].h;
     let fresh = true;
     for (let j = i + 1; j < bars.length; j++) {
       if (bars[j].l <= hi && bars[j].h >= lo) { fresh = false; break; }
