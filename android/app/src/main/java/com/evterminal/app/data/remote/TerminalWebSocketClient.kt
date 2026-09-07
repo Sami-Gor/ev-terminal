@@ -1,7 +1,5 @@
 package com.evterminal.app.data.remote
 
-import android.os.Handler
-import android.os.Looper
 import com.evterminal.app.data.model.TelemetryTick
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,14 +12,14 @@ import okhttp3.WebSocket
 import okhttp3.WebSocketListener
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.concurrent.TimeUnit
 
 enum class ConnectionState { CONNECTING, CONNECTED, CLOSING, DISCONNECTED, FAILED }
 
 /**
  * OkHttp-backed persistent WebSocket client for the EVT://TERMINAL feed.
  *
- * - 30 s ping interval keeps the socket alive through NATs and proxies.
+ * - Shares the singleton [OkHttpClient] (NetworkModule) — pingInterval keeps
+ *   the socket alive and detects dropped frames.
  * - Automatically sends the JSON subscribe payload on open.
  * - Incoming ticks are exposed as a hot [SharedFlow]; parsing runs on the
  *   OkHttp reader thread, never on the main thread.
@@ -36,15 +34,10 @@ class TerminalWebSocketClient(
     /** Symbols subscribed on open; an empty list receives the full board. */
     private val symbols: List<String> = DEFAULT_SYMBOLS,
     /** The backend allowlists upgrade requests by Origin header. */
-    private val origin: String = DEFAULT_ORIGIN
+    private val origin: String = DEFAULT_ORIGIN,
+    /** Shared singleton client — do not build a second one. */
+    private val client: OkHttpClient = NetworkModule.okHttpClient
 ) {
-
-    private val client: OkHttpClient = OkHttpClient.Builder()
-        .pingInterval(PING_INTERVAL_SECONDS, TimeUnit.SECONDS)
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(0, TimeUnit.MILLISECONDS)     // WebSocket: never time out reads
-        .retryOnConnectionFailure(true)
-        .build()
 
     private val reconnectHandler = Handler(Looper.getMainLooper())
     private var webSocket: WebSocket? = null
@@ -149,7 +142,6 @@ class TerminalWebSocketClient(
         const val DEFAULT_URL = "ws://10.0.2.2:3000"
         const val DEFAULT_ORIGIN = "http://localhost:3000"
         val DEFAULT_SYMBOLS = listOf("TSLA", "RIVN")
-        const val PING_INTERVAL_SECONDS = 30L
         const val NORMAL_CLOSE_CODE = 1000
         const val RECONNECT_MAX_MS = 30_000L
     }
