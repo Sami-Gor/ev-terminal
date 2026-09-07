@@ -1,13 +1,13 @@
 /**
- * tape.js — scrolling ticker tape (macro refs + tracked universe).
+ * tape.js — scrolling ticker tape (tracked EV universe).
  */
-import { MACRO, universe, BYSYM, getTracker, connection } from '../services/store.js';
+import { universe, BYSYM, getTracker, connection } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { $, fnum, fpct, ARROW, CLS } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
 
 export function renderTape() {
-  const seq = [...MACRO, ...universe];
+  const seq = [...universe];
   const item = x => {
     const p = x.pct;
     const ch = x.chg !== undefined ? x.chg : x.last * p / (100 + p);

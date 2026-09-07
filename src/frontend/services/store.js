@@ -27,22 +27,6 @@ export const DEFAULT_UNIVERSE = [
   { sym: 'ALB', name: 'Albemarle (lithium)', sector: 'BATT', last: 86.43, pct: 2.15, vol: 3.4 },
 ];
 
-export const MACRO = [
-  { sym: 'SPX', name: 'S&P 500', last: 6412.08, pct: 0.34, state: 'CLOSED', src: 'S&P DJI', tz: 'America/New_York', reg: 'AMERICAS' },
-  { sym: 'IXIC', name: 'NASDAQ Comp', last: 21155.40, pct: 0.48, state: 'CLOSED', src: 'Nasdaq', tz: 'America/New_York', reg: 'AMERICAS' },
-  { sym: 'DJI', name: 'Dow Jones', last: 44938.51, pct: -0.11, state: 'CLOSED', src: 'S&P DJI', tz: 'America/New_York', reg: 'AMERICAS' },
-  { sym: 'STOXX50E', name: 'STOXX 50', last: 5402.77, pct: 0.19, state: 'CLOSED', src: 'STOXX', tz: 'Europe/London', reg: 'EUROPE' },
-  { sym: 'FTSE', name: 'FTSE 100', last: 9104.62, pct: -0.16, state: 'CLOSED', src: 'FTSE', tz: 'Europe/London', reg: 'EUROPE' },
-  { sym: 'DAX', name: 'DAX 40', last: 24318.90, pct: 0.27, state: 'CLOSED', src: 'Deutsche Börse', tz: 'Europe/Berlin', reg: 'EUROPE' },
-  { sym: 'N225', name: 'Nikkei 225', last: 41512.06, pct: 0.76, state: 'CLOSED', src: 'Nikkei', tz: 'Asia/Tokyo', reg: 'APAC' },
-  { sym: 'HSI', name: 'Hang Seng', last: 25466.18, pct: 1.04, state: 'CLOSED', src: 'HSI Ltd', tz: 'Asia/Hong_Kong', reg: 'APAC' },
-  { sym: 'SSE', name: 'SSE Composite', last: 3624.85, pct: 0.29, state: 'CLOSED', src: 'SSE', tz: 'Asia/Shanghai', reg: 'APAC' },
-  { sym: 'NICK', name: 'Nickel LME', last: 16540, pct: 1.29, state: 'OPEN', src: 'DEMO desk', tz: 'America/New_York', reg: 'BATT METALS', dec: 0 },
-  { sym: 'COPR', name: 'Copper LME', last: 10235, pct: 0.84, state: 'OPEN', src: 'DEMO desk', tz: 'America/New_York', reg: 'BATT METALS', dec: 0 },
-];
-
-export const AS_OF_SHORT = '2026-09-04';
-
 /* ---------------- event bus ---------------- */
 
 const listeners = {};

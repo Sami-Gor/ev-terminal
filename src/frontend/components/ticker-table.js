@@ -1,8 +1,8 @@
 /**
- * ticker-table.js — global ticker table (macro refs grouped above the
- * tracked universe) with row-click focus and inline ✕ removal.
+ * ticker-table.js — global ticker table (tracked EV universe grouped by
+ * sector) with row-click focus and inline ✕ removal.
  */
-import { MACRO, universe, SECTORS, getTracker, connection } from '../services/store.js';
+import { universe, SECTORS, getTracker, connection } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { removeTracker } from './trackers.js';
 import { $, fnum, fchg, fpct, ARROW, CLS } from '../utils/format.js';
@@ -10,15 +10,7 @@ import { esc } from '../utils/sanitize.js';
 
 export function renderTickerTable() {
   const tbody = $('tk-table').querySelector('tbody');
-  let h = '<tr class="cat"><td colspan="7">MACRO / INDEX / COMMODITY REF</td></tr>';
-  MACRO.forEach(m => {
-    const d = m.dec ?? 2;
-    h += `<tr><td><b>${m.sym}</b></td><td>${m.name}</td><td>${fnum(m.last, d)}</td>` +
-      `<td class="${CLS(m.pct)}">${ARROW(m.pct)} ${fchg(m.last * m.pct / (100 + m.pct), d)}</td>` +
-      `<td class="${CLS(m.pct)}">${fpct(m.pct)}</td>` +
-      `<td><span class="stateb ${m.state === 'OPEN' ? 'open' : ''}">${m.state}</span></td>` +
-      `<td class="src">${m.src}</td></tr>`;
-  });
+  let h = '';
   for (const key of Object.keys(SECTORS)) {
     h += `<tr class="cat"><td colspan="7">${SECTORS[key].label} · n=${universe.filter(t => t.sector === key).length}</td></tr>`;
     universe.filter(t => t.sector === key).forEach(t => {

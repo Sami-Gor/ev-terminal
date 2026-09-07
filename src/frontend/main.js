@@ -3,7 +3,7 @@
  *
  * Execution order (deterministic):
  *   1. Constants & data models      → store.initUniverse()
- *   2. Static UI render init        → tape / ticker / heatmap / sector / news / metals / map / journal
+ *   2. Static UI render init        → tape / ticker / heatmap / sector / news / journal
  *   3. Network service layer        → wsConnect() + staggered history & quote loads
  *   4. Focus & analytics cards      → setFocus() (chart + financials)
  *   5. Event listeners              → chart controls, trackers, alerts, layout, clock, bus
@@ -24,7 +24,6 @@ import * as tickerTable from './components/ticker-table.js';
 import * as heatmap from './components/heatmap.js';
 import * as sector from './components/sector.js';
 import * as news from './components/news.js';
-import * as metals from './components/metals.js';
 import * as clock from './components/clock.js';
 import * as focusChart from './components/focus-chart.js';
 import * as financials from './components/financials.js';
@@ -46,7 +45,6 @@ tickerTable.renderTickerTable();
 heatmap.initHeatmap();
 sector.renderSector();
 news.initNews();
-metals.initMetals();
 journal.initJournal();
 setBadgeState();
 

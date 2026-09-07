@@ -113,7 +113,7 @@ function renderMTF(t) {
 
   const W = 820, PL = 8, PR = 60, plotW = W - PL - PR;
   const specs = [
-    { tf: 'D', bars: H.map(b => ({ t: Date.parse(b.dt), c: b.c })), y0: 10, y1: 142, label: 'D · DAILY — macro trend & major levels', swings: false },
+    { tf: 'D', bars: H.map(b => ({ t: Date.parse(b.dt), c: b.c })), y0: 10, y1: 142, label: 'D · DAILY — trend & major levels', swings: false },
     { tf: '4H', bars: bars4h, y0: 152, y1: 238, label: '4H · MARKET STRUCTURE & SWINGS', swings: true },
     { tf: '15M', bars: bars15m, y0: 248, y1: 316, label: '15M · EXECUTION PRICE ACTION', swings: false },
   ];
