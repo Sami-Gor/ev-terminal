@@ -1,6 +1,9 @@
 package com.evterminal.app.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,6 +20,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -30,6 +34,9 @@ import com.evterminal.app.data.remote.ConnectionState
 import com.evterminal.app.ui.theme.Amber
 import com.evterminal.app.ui.theme.Green
 import com.evterminal.app.ui.theme.LineDark
+import com.evterminal.app.ui.model.NewsItem
+import com.evterminal.app.ui.model.NewsPriority
+import com.evterminal.app.ui.model.Sentiment
 import com.evterminal.app.ui.theme.Red
 
 /** Connection badge — style switches with the state (green LIVE, amber RECONNECTING…). */
@@ -148,4 +155,148 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.Bold,
         modifier = modifier.padding(top = 12.dp, bottom = 6.dp)
     )
+}
+
+
+/* ===== EV news wire (enriched by the topic-correlation engine) ===== */
+
+private val SentimentGreen = Color(0xFF00C176)
+private val SentimentRed = Color(0xFFE5484D)
+private val SentimentNeutral = Color(0xFF8B949E)
+
+/** System status strip shown above the news wire. */
+@Composable
+fun NewsEngineStatusHeader(modifier: Modifier = Modifier) {
+    Text(
+        "System Status: Built-in EV Maker Topic Correlation Engine (Active)",
+        color = Green,
+        fontSize = 10.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier.padding(bottom = 6.dp)
+    )
+}
+
+/** Pill-style clickable ticker chip — taps focus the symbol across panels. */
+@Composable
+fun TickerChip(symbol: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val borderColor = if (selected) Amber else LineDark
+    val textColor = if (selected) Amber else Color(0xFFC9D1D9)
+    Text(
+        symbol,
+        color = textColor,
+        fontSize = 9.sp,
+        fontWeight = FontWeight.Bold,
+        modifier = modifier
+            .background(if (selected) Color(0xFF2A1D08) else Color(0xFF14161A))
+            .border(1.dp, borderColor, RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    )
+}
+
+/** Horizontal sentiment + impact bar: length = impact (1–10), hue = sentiment. */
+@Composable
+fun SentimentImpactBar(sentiment: Sentiment, impactScore: Int, modifier: Modifier = Modifier) {
+    val barColor = when (sentiment) {
+        Sentiment.BULLISH -> SentimentGreen
+        Sentiment.BEARISH -> SentimentRed
+        Sentiment.NEUTRAL -> SentimentNeutral
+    }
+    val fraction = impactScore.coerceIn(1, 10) / 10f
+    val glyph = when (sentiment) {
+        Sentiment.BULLISH -> "▲"
+        Sentiment.BEARISH -> "▼"
+        Sentiment.NEUTRAL -> "•"
+    }
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(glyph, color = barColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.width(4.dp))
+        Box(
+            Modifier
+                .width(72.dp)
+                .height(4.dp)
+                .background(Color(0xFF26282B), RoundedCornerShape(2.dp))
+        ) {
+            Box(
+                Modifier
+                    .fillMaxWidth(fraction)
+                    .height(4.dp)
+                    .background(barColor, RoundedCornerShape(2.dp))
+            )
+        }
+    }
+}
+
+/** Priority marker — 🔥 flags high-impact items. */
+@Composable
+fun PriorityIcon(priority: NewsPriority, modifier: Modifier = Modifier) {
+    val (icon, color) = when (priority) {
+        NewsPriority.HIGH -> "🔥" to Red
+        NewsPriority.MEDIUM -> "▲" to Amber
+        NewsPriority.LOW -> "·" to Color(0xFF8B949E)
+    }
+    Text(icon, color = color, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = modifier)
+}
+
+/**
+ * Dense news micro-card: time · sentiment/impact bar · ticker chips ·
+ * category · priority · headline (high-impact cards get a red frame).
+ */
+@Composable
+fun EvNewsWireCard(
+    item: NewsItem,
+    selectedSymbol: String?,
+    onChipClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val sentimentColor = when (item.sentiment) {
+        Sentiment.BULLISH -> SentimentGreen
+        Sentiment.BEARISH -> SentimentRed
+        Sentiment.NEUTRAL -> SentimentNeutral
+    }
+    val time = remember(item.timestamp) { item.timestamp.drop(11).take(8) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (item.isHighImpact) Color(0xFF17110A) else Color(0xFF0E0F11)
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (item.isHighImpact) Red.copy(alpha = 0.35f) else LineDark
+        )
+    ) {
+        Column(Modifier.padding(8.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(time, color = Color(0xFF8B949E), fontSize = 9.sp)
+                Spacer(Modifier.width(8.dp))
+                SentimentImpactBar(item.sentiment, item.impactScore)
+                Spacer(Modifier.width(8.dp))
+                PriorityIcon(item.priority)
+                Spacer(Modifier.weight(1f))
+                Text(
+                    item.category.uppercase(),
+                    color = Amber,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp, alignment = Alignment.Start)
+            ) {
+                item.tickers.forEach { symbol ->
+                    TickerChip(
+                        symbol = symbol,
+                        selected = symbol == selectedSymbol,
+                        onClick = { onChipClick(symbol) }
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(item.headline, color = Color(0xFFC9D1D9), fontSize = 11.sp)
+            Text(item.tag, color = sentimentColor, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
+    }
 }

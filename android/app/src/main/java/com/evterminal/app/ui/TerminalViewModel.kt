@@ -4,11 +4,15 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.evterminal.app.data.model.NewsEvent
 import com.evterminal.app.data.model.TelemetryTick
 import com.evterminal.app.data.model.VehicleTelemetry
 import com.evterminal.app.data.remote.ConnectionState
 import com.evterminal.app.data.remote.MarketApi
+import com.evterminal.app.data.remote.NewsApi
 import com.evterminal.app.data.remote.TerminalWebSocketClient
+import com.evterminal.app.ui.model.NewsItem
+import com.evterminal.app.ui.model.toNewsItem
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -30,8 +34,25 @@ import kotlinx.coroutines.launch
  */
 class TerminalViewModel(
     private val wsClient: TerminalWebSocketClient = TerminalWebSocketClient(SERVER_URL),
-    private val marketApi: MarketApi = MarketApi(SERVER_URL)
+    private val marketApi: MarketApi = MarketApi(SERVER_URL),
+    private val newsApi: NewsApi = NewsApi(SERVER_URL)
 ) : ViewModel(), DefaultLifecycleObserver {
+
+    /** Symbol focused via news-wire ticker chips (drives cross-panel highlighting). */
+    private val _selectedSymbol = MutableStateFlow<String?>(null)
+    val selectedSymbol: StateFlow<String?> = _selectedSymbol.asStateFlow()
+
+    private val _newsEvents = MutableStateFlow<List<NewsEvent>>(emptyList())
+
+    /** Enriched news wire — conflated so intermediate un-rendered frames are dropped. */
+    val news: StateFlow<List<NewsItem>> = _newsEvents
+        .conflate()
+        .map { events -> events.map { it.toNewsItem() } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+            initialValue = emptyList()
+        )
 
     /** EV fleet telemetry, refreshed from GET /api/market on a fixed cadence. */
     private val _vehicles = MutableStateFlow<List<VehicleTelemetry>>(emptyList())
@@ -77,10 +98,18 @@ class TerminalViewModel(
                     marketApi.fetchSnapshot()?.let { snapshot ->
                         _vehicles.value = snapshot.vehicles
                     }
+                    newsApi.fetchNews().takeIf { it.isNotEmpty() }?.let { events ->
+                        _newsEvents.value = events
+                    }
                 }
                 delay(VEHICLE_REFRESH_MS)
             }
         }
+    }
+
+    /** News-wire chip tap: focuses the symbol across terminal panels. */
+    fun onTickerChipClick(symbol: String) {
+        _selectedSymbol.value = if (_selectedSymbol.value == symbol) null else symbol
     }
 
     /** App returned to the foreground — reconnect and resume polling. */
