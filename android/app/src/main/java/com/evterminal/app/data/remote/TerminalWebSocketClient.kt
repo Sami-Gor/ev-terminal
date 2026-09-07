@@ -1,5 +1,7 @@
 package com.evterminal.app.data.remote
 
+import android.os.Handler
+import android.os.Looper
 import com.evterminal.app.data.model.TelemetryTick
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +23,10 @@ enum class ConnectionState { CONNECTING, CONNECTED, CLOSING, DISCONNECTED, FAILE
  *
  * - 30 s ping interval keeps the socket alive through NATs and proxies.
  * - Automatically sends the JSON subscribe payload on open.
- * - Incoming ticks are exposed as a hot [SharedFlow].
+ * - Incoming ticks are exposed as a hot [SharedFlow]; parsing runs on the
+ *   OkHttp reader thread, never on the main thread.
+ * - Automatic reconnection with capped exponential backoff on failure or
+ *   server-initiated close (user-initiated closes do not reconnect).
  *
  * Note on the payload: the backend protocol is `{"type":"subscribe","symbols":[…]}`.
  */
@@ -41,7 +46,10 @@ class TerminalWebSocketClient(
         .retryOnConnectionFailure(true)
         .build()
 
+    private val reconnectHandler = Handler(Looper.getMainLooper())
     private var webSocket: WebSocket? = null
+    private var userClosed = false
+    private var reconnectAttempt = 0
 
     /** Hot stream of incoming telemetry ticks. */
     private val _ticks = MutableSharedFlow<TelemetryTick>(replay = 32, extraBufferCapacity = 64)
@@ -53,11 +61,14 @@ class TerminalWebSocketClient(
     val isConnected: Boolean
         get() = _connectionState.value == ConnectionState.CONNECTED
 
-    /** Opens the persistent socket; idempotent while a connection is live. */
+    /** Opens the persistent socket; idempotent while connect/close is in flight. */
     fun connect() {
         if (_connectionState.value == ConnectionState.CONNECTING ||
-            _connectionState.value == ConnectionState.CONNECTED
+            _connectionState.value == ConnectionState.CONNECTED ||
+            _connectionState.value == ConnectionState.CLOSING
         ) return
+        userClosed = false
+        reconnectAttempt = 0
         _connectionState.value = ConnectionState.CONNECTING
         val request = Request.Builder()
             .url(url)
@@ -66,12 +77,15 @@ class TerminalWebSocketClient(
         webSocket = client.newWebSocket(request, listener)
     }
 
-    /** Gracefully closes the socket (code 1000) and releases it. */
+    /** Gracefully closes the socket (code 1000) and suppresses auto-reconnect. */
     fun disconnect() {
+        userClosed = true
+        reconnectHandler.removeCallbacksAndMessages(null)
         if (_connectionState.value == ConnectionState.CLOSING) return
         _connectionState.value = ConnectionState.CLOSING
         webSocket?.close(NORMAL_CLOSE_CODE, "client shutting down")
         webSocket = null
+        _connectionState.value = ConnectionState.DISCONNECTED
     }
 
     /** Sends a raw text frame; returns false when the socket is not open. */
@@ -80,6 +94,7 @@ class TerminalWebSocketClient(
     private val listener = object : WebSocketListener() {
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            reconnectAttempt = 0
             _connectionState.value = ConnectionState.CONNECTED
             // Auto-subscribe as soon as the socket is live.
             val payload = JSONObject()
@@ -89,6 +104,7 @@ class TerminalWebSocketClient(
         }
 
         override fun onMessage(webSocket: WebSocket, text: String) {
+            // Runs on the OkHttp reader thread — parsing stays off the main thread.
             parseTick(text)?.let { tick ->
                 // The connect-time snapshot covers the full board; keep only the
                 // symbols this client actually subscribed to.
@@ -105,12 +121,21 @@ class TerminalWebSocketClient(
         override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
             this@TerminalWebSocketClient.webSocket = null
             _connectionState.value = ConnectionState.DISCONNECTED
+            if (!userClosed) scheduleReconnect()       // server-initiated close
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             this@TerminalWebSocketClient.webSocket = null
             _connectionState.value = ConnectionState.FAILED
+            if (!userClosed) scheduleReconnect()       // drop / timeout / handshake error
         }
+    }
+
+    /** Capped exponential backoff: 1 s → 2 s → 4 s → … → 30 s ceiling. */
+    private fun scheduleReconnect() {
+        reconnectAttempt++
+        val delayMs = minOf(1000L shl (reconnectAttempt - 1).coerceAtMost(5), RECONNECT_MAX_MS)
+        reconnectHandler.postDelayed({ if (!userClosed) connect() }, delayMs)
     }
 
     private fun parseTick(text: String): TelemetryTick? = runCatching {
@@ -126,5 +151,6 @@ class TerminalWebSocketClient(
         val DEFAULT_SYMBOLS = listOf("TSLA", "RIVN")
         const val PING_INTERVAL_SECONDS = 30L
         const val NORMAL_CLOSE_CODE = 1000
+        const val RECONNECT_MAX_MS = 30_000L
     }
 }

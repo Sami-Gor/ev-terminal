@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import com.evterminal.app.data.model.TelemetryTick
 import com.evterminal.app.data.model.VehicleTelemetry
 import com.evterminal.app.data.remote.ConnectionState
@@ -73,15 +74,15 @@ fun TickerCard(tick: TelemetryTick, modifier: Modifier = Modifier) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(tick.symbol, color = Amber, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 Text(
-                    "$dirGlyph ${sign}${"%.2f".format(kotlin.math.abs(tick.percentChange))}%",
+                    "$dirGlyph ${sign}${String.format(Locale.US, "%.2f", kotlin.math.abs(tick.percentChange))}%",
                     color = arrowColor,
                     fontSize = 12.sp
                 )
             }
             Spacer(Modifier.height(4.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("$" + "%,.2f".format(tick.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text("vol " + "%,.0f".format(tick.volume), color = Color(0xFF8B949E), fontSize = 10.sp)
+                Text("$" + String.format(Locale.US, "%,.2f", tick.price), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text("vol " + String.format(Locale.US, "%,.0f", tick.volume), color = Color(0xFF8B949E), fontSize = 10.sp)
             }
         }
     }
@@ -107,7 +108,7 @@ fun VehicleHudCard(vehicle: VehicleTelemetry, modifier: Modifier = Modifier) {
             Text(vehicle.vehicleId, color = Color(0xFF8B949E), fontSize = 10.sp)
             Spacer(Modifier.height(8.dp))
 
-            Text("SoC ${"%.1f".format(vehicle.socPct)}%", color = Green, fontSize = 11.sp)
+            Text("SoC ${String.format(Locale.US, "%.1f", vehicle.socPct)}%", color = Green, fontSize = 11.sp)
             LinearProgressIndicator(
                 progress = { (vehicle.socPct / 100.0).toFloat().coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(6.dp),
@@ -117,10 +118,10 @@ fun VehicleHudCard(vehicle: VehicleTelemetry, modifier: Modifier = Modifier) {
             Spacer(Modifier.height(8.dp))
 
             HudRow("Range", "${vehicle.rangeKm} km")
-            HudRow("Battery", "${"%.1f".format(vehicle.batteryTempC)} °C")
-            HudRow("Motor", "${"%.1f".format(vehicle.motorTempC)} °C")
-            HudRow("Charging", "${"%.1f".format(vehicle.chargingKw)} kW")
-            HudRow("Odometer", "${"%,.0f".format(vehicle.odometerKm)} km")
+            HudRow("Battery", "${String.format(Locale.US, "%.1f", vehicle.batteryTempC)} °C")
+            HudRow("Motor", "${String.format(Locale.US, "%.1f", vehicle.motorTempC)} °C")
+            HudRow("Charging", "${String.format(Locale.US, "%.1f", vehicle.chargingKw)} kW")
+            HudRow("Odometer", "${String.format(Locale.US, "%,.0f", vehicle.odometerKm)} km")
         }
     }
 }
