@@ -66,12 +66,11 @@ const WS_HEARTBEAT_MS = 30000;
  *  The storage file holds real email addresses — it must stay git-ignored. */
 const UPGRADE_INTEREST_FILE = path.join(__dirname, '..', '..', '..', 'var', 'upgrade-interest.json');
 
-/** Broker referral (static outbound link only — no OAuth, no order routing).
- *  The risk disclosure is a placeholder until the partner's compliance
- *  wording is confirmed; override via TRADE_NATION_RISK_DISCLOSURE. */
-const TRADE_NATION_URL = process.env.TRADE_NATION_URL || 'https://www.tradenation.com/';
-const TRADE_NATION_RISK_DISCLOSURE =
-  process.env.TRADE_NATION_RISK_DISCLOSURE || '{{TRADE_NATION_RISK_DISCLOSURE}}';
+/** Direct broker execution (Alpaca REST). Paper by default — flip
+ *  ALPACA_PAPER=false only for private live-money self-use. */
+const ALPACA_API_KEY = process.env.ALPACA_API_KEY || '';
+const ALPACA_SECRET_KEY = process.env.ALPACA_SECRET_KEY || '';
+const ALPACA_PAPER = process.env.ALPACA_PAPER !== 'false';
 
 module.exports = {
   PORT,
@@ -92,6 +91,7 @@ module.exports = {
   WS_MAX_SYMBOLS_PER_CLIENT,
   WS_HEARTBEAT_MS,
   UPGRADE_INTEREST_FILE,
-  TRADE_NATION_URL,
-  TRADE_NATION_RISK_DISCLOSURE,
+  ALPACA_API_KEY,
+  ALPACA_SECRET_KEY,
+  ALPACA_PAPER,
 };

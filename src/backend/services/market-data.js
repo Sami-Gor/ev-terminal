@@ -11,6 +11,7 @@ const demoProvider = require('../providers/demo-provider');
 const polygonProvider = require('../providers/polygon-provider');
 const fmpProvider = require('../providers/fmp-provider');
 const { fmpFinancials } = require('../providers/financials-provider');
+const polygonStream = require('../providers/polygon-stream');
 
 const historyCache = new TtlCache(HISTORY_TTL_MS);
 const financialsCache = new TtlCache(FINANCIALS_TTL_MS);
@@ -119,6 +120,26 @@ const cacheUpdateListeners = [];
 let pollingTimer = null;
 let pollIntervalMs = DEFAULT_POLL_INTERVAL_MS;
 let consecutiveFailures = 0;
+let liveFlushPending = false;
+
+/** Live-tick ingestion: applies a trade tick to the cached ticker and
+ *  notifies listeners (throttled to one flush per 250 ms during bursts). */
+function ingestLiveTick(symbol, price, size, tradeTs) {
+  const t = marketCache.tickers.find(x => x.symbol === symbol);
+  if (!t) return;
+  t.price = price;
+  t.change = +(price - t.prevClose).toFixed(2);
+  t.percentChange = t.prevClose ? +((price - t.prevClose) / t.prevClose * 100).toFixed(2) : 0;
+  t.volume = size ? (t.volume || 0) + size : t.volume;
+  marketCache.updatedAt = new Date().toISOString();
+  if (!liveFlushPending) {
+    liveFlushPending = true;
+    setTimeout(() => {
+      liveFlushPending = false;
+      notifyCacheUpdate();
+    }, 250);
+  }
+}
 let failureSkipPhase = 0;
 
 /** Subscribe to every cache refresh (used by the WebSocket feed manager). */
@@ -278,19 +299,24 @@ function startPolling(intervalMs = DEFAULT_POLL_INTERVAL_MS) {
   pollIntervalMs = Number(intervalMs) > 0 ? Number(intervalMs) : DEFAULT_POLL_INTERVAL_MS;
   if (pollingTimer) return () => stopPolling();
   pollOnce();                                         // immediate first refresh
-  pollingTimer = setInterval(() => {
-    // graceful degradation: while failing repeatedly, skip 2 of every 3 cycles
-    if (consecutiveFailures >= 3) {
-      failureSkipPhase = (failureSkipPhase + 1) % 3;
-      if (failureSkipPhase !== 0) return;            // 3x effective backoff
-    }
-    pollOnce();
-  }, pollIntervalMs);
+
+  if (PROVIDER_MODE === 'polygon') {
+    // Real-time trade stream pushes ticks into the cache; a slow REST
+    // re-sync (60 s) stays as the safety net for missed windows.
+    polygonStream.start({
+      getSymbols: () => defaultUniverse().map(u => u.sym),
+      onTick: (sym, price, size) => ingestLiveTick(sym, price, size),
+    });
+    pollingTimer = setInterval(() => pollOnce(), 60000);
+  } else {
+    pollingTimer = setInterval(() => pollOnce(), pollIntervalMs);
+  }
   return () => stopPolling();
 }
 
 function stopPolling() {
   if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+  polygonStream.stop();
 }
 
 /** Read-only snapshot of the cached market telemetry (null before first poll). */

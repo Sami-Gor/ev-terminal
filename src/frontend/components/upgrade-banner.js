@@ -45,7 +45,7 @@ async function captureInterest() {
 export function initUpgradeBanner() {
   $('up-btn').addEventListener('click', e => {
     e.stopPropagation();
-    ['cards-pop', 'tk-pop', 'alert-pop', 'broker-pop'].forEach(id => $(id).classList.remove('open'));
+    ['cards-pop', 'tk-pop', 'alert-pop'].forEach(id => $(id).classList.remove('open'));
     $('up-btn').setAttribute('aria-expanded', $('up-pop').classList.contains('open') ? 'false' : 'true');
     $('up-pop').classList.toggle('open');
   });
