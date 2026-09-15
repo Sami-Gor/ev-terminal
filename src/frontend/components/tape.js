@@ -1,7 +1,7 @@
 /**
  * tape.js — scrolling ticker tape (tracked EV universe).
  */
-import { universe, BYSYM, getTracker, connection } from '../services/store.js';
+import { universe, BYSYM, getTracker, stateLabel } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { $, fnum, fpct, ARROW, CLS } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
@@ -14,7 +14,7 @@ export function renderTape() {
     return `<span class="ti" ${BYSYM[x.sym] ? 'data-sym="' + esc(x.sym) + '"' : ''}><b>${esc(x.sym)}</b>` +
       `<span class="px">${fnum(x.last, x.dec ?? 2)}</span>` +
       `<span class="${CLS(p)}">${ARROW(p)} ${fpct(p)}</span>` +
-      `<em>${x.state || (connection.simulated ? 'SIM' : connection.live ? 'LIVE' : 'CLOSED')}</em></span>`;
+      `<em>${x.state || stateLabel()}</em></span>`;
   };
   const one = seq.map(item).join('');
   $('tape').innerHTML = one + one;
@@ -36,7 +36,7 @@ export function updateSymbols(syms) {
       const em = el.querySelector('em');
       if (px) px.textContent = fnum(t.last);
       if (pc) { pc.className = CLS(t.pct); pc.textContent = ARROW(t.pct) + ' ' + fpct(t.pct); }
-      if (em) em.textContent = connection.simulated ? 'SIM' : connection.live ? 'LIVE' : 'CLOSED';
+      if (em) em.textContent = stateLabel();
     });
   });
 }

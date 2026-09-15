@@ -2,7 +2,7 @@
  * ticker-table.js — global ticker table (tracked EV universe grouped by
  * sector) with row-click focus and inline ✕ removal.
  */
-import { universe, SECTORS, getTracker, connection } from '../services/store.js';
+import { universe, SECTORS, getTracker, connection, stateLabel } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { $, fnum, fchg, fpct, ARROW, CLS } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
@@ -15,7 +15,7 @@ export function renderTickerTable() {
     universe.filter(t => t.sector === key).forEach(t => {
       h += `<tr data-sym="${esc(t.sym)}" class="urow" tabindex="0" aria-label="${esc(t.sym)}, ${esc(t.name)}, last ${fnum(t.last)}, ${fpct(t.pct)}. Press Enter to open chart" role="button"><td><b>${esc(t.sym)}</b></td><td>${esc(t.name)}</td><td>${fnum(t.last)}</td>` +
         `<td class="${CLS(t.pct)}">${ARROW(t.pct)} ${fchg(t.chg)}</td><td class="${CLS(t.pct)}">${fpct(t.pct)}</td>` +
-        `<td><span class="stateb ${connection.live ? 'open' : ''}">${connection.simulated ? 'SIM' : connection.live ? 'LIVE' : 'CLOSED'}</span></td>` +
+        `<td><span class="stateb ${connection.live ? 'open' : ''}">${stateLabel()}</span></td>` +
         `<td class="src">${connection.dataSrc}</td>` +
         `<td class="rm" data-rm="${esc(t.sym)}" title="remove ${esc(t.sym)} from trackers">✕</td></tr>`;
     });

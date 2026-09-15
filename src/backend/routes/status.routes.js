@@ -14,6 +14,8 @@ router.get('/', (req, res) => {
     // Honest mode reporting: a distributed (public) build ALWAYS reports
     // simulated — even if vendor keys happen to sit unused in the env.
     mode: config.PROVIDER_MODE === 'demo' || config.FORCE_SIMULATED ? 'simulated' : 'live-keys',
+    // Precise data provenance: 'simulated' | 'eod' (previous close only) | 'realtime'.
+    dataMode: marketData.getDataMode(),
     wsClients: feedManager.clientCount(),
     subscribed: feedManager.subscribedSymbols(),
     defaultUniverse: marketData.defaultUniverse().map(u => u.sym),

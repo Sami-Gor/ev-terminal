@@ -15,7 +15,7 @@ const cache = require('./market-cache');
 const { generateMockTelemetry } = require('./mock-telemetry');
 
 let pollingTimer = null;
-let consecutiveFailures = 0;
+let pollInFlight = false;
 
 function quotePriceOf(q) {
   return Number.isFinite(q.price) && q.price > 0 ? q.price : 0;
@@ -43,12 +43,14 @@ async function fetchExternalTelemetry(syms, getQuotes) {
 }
 
 function pollOnce(getQuotes, getSymbols) {
+  if (pollInFlight) return;                               // slow fallback fetches must not overlap
+  pollInFlight = true;
   cache.recordAttempt();
 
   if (USE_MOCK_DATA === true) {
     const mock = generateMockTelemetry();
     cache.applyMarketSnapshot(mock.tickers, mock.vehicles);  // mock telemetry replaces the cache wholesale
-    consecutiveFailures = 0;
+    pollInFlight = false;
     return;
   }
 
@@ -63,12 +65,12 @@ function pollOnce(getQuotes, getSymbols) {
         return;
       }
       cache.applyMarketSnapshot(payload.tickers, payload.vehicles);
-      consecutiveFailures = 0;
     })
     .catch(e => {
       cache.recordFailure(e.message);
       cache.markStaleRetained();
-    });
+    })
+    .finally(() => { pollInFlight = false; });
 }
 
 /**
@@ -83,16 +85,28 @@ function pollOnce(getQuotes, getSymbols) {
 function startPolling({ getQuotes, getSymbols }, intervalMs = POLL_INTERVAL_MS) {
   const effectiveMs = Number(intervalMs) > 0 ? Number(intervalMs) : POLL_INTERVAL_MS;
   if (pollingTimer) return () => stopPolling();
+
+  const setIntervalMs = ms => {
+    if (pollingTimer) clearInterval(pollingTimer);
+    pollingTimer = setInterval(() => pollOnce(getQuotes, getSymbols), ms);
+  };
+
   pollOnce(getQuotes, getSymbols);                        // immediate first refresh
 
   if (PROVIDER_MODE === 'polygon') {
-    polygonStream.start({
+    const streaming = polygonStream.start({
       getSymbols,
       onTick: (sym, price, size) => cache.ingestLiveTick(sym, price, size),
+      // Permanent entitlement rejection: keep REST quotes flowing at the
+      // normal provider cadence instead of the 60 s stream-resync cadence.
+      onUnavailable: () => setIntervalMs(effectiveMs),
     });
-    pollingTimer = setInterval(() => pollOnce(getQuotes, getSymbols), POLYGON_REST_RESYNC_MS);
+    pollingTimer = setInterval(
+      () => pollOnce(getQuotes, getSymbols),
+      streaming ? POLYGON_REST_RESYNC_MS : effectiveMs,
+    );
   } else {
-    pollingTimer = setInterval(() => pollOnce(getQuotes, getSymbols), effectiveMs);
+    setIntervalMs(effectiveMs);
   }
   return () => stopPolling();
 }

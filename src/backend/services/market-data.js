@@ -98,10 +98,24 @@ async function getQuotes(syms) {
     return out;
   }
   if (PROVIDER_MODE === 'fmp') return fmpProvider.fmpQuotes(syms);
-  return polygonProvider.polyQuotes(syms);
+  // Background polling yields to interactive requests in the rate-limit queue.
+  return polygonProvider.polyQuotes(syms, { priority: 'low' });
 }
 
 /* ---- background polling & market cache (facade delegations) -------------- */
+
+/**
+ * Effective data mode for the UI and status endpoints:
+ *   'simulated' — built-in demo engine (no provider keys / public mode)
+ *   'eod'       — real provider, but previous-session data only (no snapshot
+ *                 entitlement; free-tier fallback)
+ *   'realtime'  — provider quotes with realtime snapshot entitlement
+ */
+function getDataMode() {
+  if (PROVIDER_MODE === 'demo') return 'simulated';
+  if (PROVIDER_MODE === 'polygon') return polygonProvider.getQuoteMode() === 'eod' ? 'eod' : 'realtime';
+  return 'realtime';
+}
 
 /** Starts background market polling; returns a stop function. */
 function startPolling(intervalMs) {
@@ -137,6 +151,7 @@ module.exports = {
   getQuote,
   getFinancials,
   getQuotes,
+  getDataMode,
   startPolling,
   stopPolling,
   getCachedMarketData,

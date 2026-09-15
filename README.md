@@ -69,6 +69,10 @@ Provider priority: **Polygon → FMP → simulated**. Keys are read only by `src
 
 The UI reflects this: simulated runs badge **`● SIMULATED ENGINE`** (amber, never a green "LIVE"), and a header **⬆ UPGRADE** hook captures email interest for the future paid tier (stored server-side in a git-ignored file, never committed). A **BROKER ↗** popover carries a static outbound referral link to Trade Nation with a risk-disclosure placeholder (`{{TRADE_NATION_RISK_DISCLOSURE}}`) — no OAuth, no order routing, no account linking.
 
+### Free-tier provider keys (Polygon/Massive)
+
+Plans without Snapshot/WebSocket entitlement are supported: when the snapshot endpoint answers `403 NOT_AUTHORIZED`, quotes fall back to one daily-aggregate range request per symbol covering the last completed US trading sessions, and the feed is labelled **`● EOD · PREVIOUS CLOSE`** (`dataMode: "eod"` in `/api/status` and `/api/config`) — never presented as realtime. `change`/`percentChange` are the conventional latest-close vs previous completed close; when only one completed session is available they are `null` rather than substituted with open-to-close movement. The realtime stream is disabled for the session after a single log line instead of reconnecting, and polling continues over REST. Invalid keys (`401`), server errors and malformed responses still surface as errors.
+
 ## The `android/` directory and `ANDROID_PERFORMANCE_AUDIT.md`
 
 `android/` is a **native Kotlin companion client** (not a WebView wrapper): an OkHttp WebSocket client + ViewModel consume the same Node feed, and a Jetpack Compose dashboard renders tickers, an EV-fleet telemetry HUD and the news wire. It shares the backend's protocol (subscribe payload, tick schema) and licensing posture. `ANDROID_PERFORMANCE_AUDIT.md` documents that module's performance, state-hygiene and recomposition audit — lazy-list keys, flow conflation, process-lifecycle socket gating — and the fixes applied against it.

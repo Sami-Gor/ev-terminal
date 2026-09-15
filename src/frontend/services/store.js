@@ -159,7 +159,8 @@ export const connection = {
   wsOk: false,
   provider: 'demo',
   distributionMode: 'local',      // resolved from GET /api/config at boot
-  simulated: true,                // provider demo OR public distribution mode
+  dataMode: 'simulated',          // 'simulated' | 'eod' | 'realtime' (GET /api/config)
+  simulated: true,                // simulated engine OR public distribution mode
   tradingEnabled: false,          // resolved from GET /api/config (public mode → false)
   dataSrc: 'US demo ref',
 };
@@ -170,11 +171,22 @@ export function setConnection(patch) {
   connection.live = connection.wsOk || connection.restOk;
   // Simulated engine = the demo provider itself, OR a public distribution
   // where vendor integrations are disabled at the config layer.
-  connection.simulated = connection.distributionMode === 'public' || connection.provider === 'demo';
+  connection.simulated = connection.distributionMode === 'public'
+    || connection.dataMode === 'simulated'
+    || connection.provider === 'demo';
   connection.dataSrc = connection.live
-    ? (connection.simulated ? 'simulated feed' : connection.provider + ' feed')
+    ? (connection.simulated ? 'simulated feed'
+      : connection.dataMode === 'eod' ? 'EOD · previous close'
+        : connection.provider + ' feed')
     : 'US demo ref';
   bus.emit('connection');
+}
+
+/** Compact data-state label for tickers, tape and panel metadata. */
+export function stateLabel() {
+  if (connection.dataMode === 'eod') return 'EOD';
+  if (connection.simulated) return 'SIM';
+  return connection.live ? 'LIVE' : 'CLOSED';
 }
 
 /* ---------------- tick fan-out ---------------- */

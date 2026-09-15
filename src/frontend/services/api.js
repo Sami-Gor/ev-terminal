@@ -89,16 +89,19 @@ function connectionProvider() {
 }
 
 /**
- * Resolves the server's public configuration (distribution mode, trading
- * capability). Called once at boot before the UI settles labels.
+ * Resolves the server's public configuration (distribution mode, provider,
+ * effective data mode, trading capability). Refreshed periodically so a
+ * free-tier downgrade (realtime → EOD) is reflected in the UI labels.
  */
 export async function fetchAppConfig() {
   try {
     const cfg = await fetchJson(`${API_BASE}/api/config`);
+    const dataMode = cfg.dataMode || (cfg.simulated === false ? 'realtime' : 'simulated');
     setConnection({
       restOk: true,
-      provider: cfg.dataMode === 'simulated' ? 'demo' : connectionProvider(),
+      provider: cfg.provider || (dataMode === 'simulated' ? 'demo' : connectionProvider()),
       distributionMode: cfg.distributionMode || 'local',
+      dataMode,
       tradingEnabled: cfg.tradingEnabled === true,
     });
     return cfg;
@@ -111,6 +114,10 @@ export async function fetchAppConfig() {
 /** Staggered boot fetch: histories first, then quotes. */
 export function scheduleInitialLoads(universe) {
   fetchAppConfig();
+  // The first provider poll can downgrade realtime → EOD moments after boot;
+  // refresh shortly after and then periodically to keep labels honest.
+  setTimeout(fetchAppConfig, 8000);
+  setInterval(fetchAppConfig, 60000);
   universe.forEach((t, i) => setTimeout(() => ensureHistory(t), i * 150));
   setTimeout(() => {
     universe.forEach((t, i) => setTimeout(() => ensureQuote(t), i * 200));
