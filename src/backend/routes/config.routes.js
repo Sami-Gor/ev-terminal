@@ -14,6 +14,9 @@ router.get('/', (req, res) => {
     distributionMode: config.DISTRIBUTION_MODE,
     dataMode: 'simulated',                     // v1.0 ships on the simulated engine
     simulated: true,                           // explicit — real data is a future paid upgrade
+    // Safe capability flag only: false in public mode and until TRADING_API_TOKEN
+    // is configured. Never exposes the token or broker credentials.
+    tradingEnabled: config.TRADING_ENABLED,
     upgradeInterestEnabled: true
   });
 });

@@ -25,8 +25,6 @@ function wsConnect() {
     try { msg = JSON.parse(ev.data); } catch (e) { return; }
     if (msg.type === 'tick' && msg.symbol) {
       if (applyTick(msg)) tickHandlers.forEach(cb => cb(msg.symbol, getTracker(msg.symbol)));
-    } else if (msg.type === 'hello' && msg.provider) {
-      setConnection({ provider: msg.provider });
     }
   };
   ws.onclose = () => {

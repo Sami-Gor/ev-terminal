@@ -4,11 +4,10 @@
  */
 import { getTracker, chartState } from '../services/store.js';
 import { $, fnum, fpct } from '../utils/format.js';
-import { esc } from '../utils/sanitize.js';
+import { esc, isValidSymbol } from '../utils/sanitize.js';
 
 const ALERTS_KEY = 'evt-alerts-v1';
 const ALERT_CONDS = ['above', 'below', 'pctup'];
-const ALERT_SYM_RE = /^[A-Z0-9.\-^]{1,10}$/;
 let alerts = { active: [], history: [], unread: 0, chime: true };
 const lastTickPrice = {};
 let audioContext = null;
@@ -17,14 +16,14 @@ let audioContext = null;
 function validAlert(a) {
   return !!a && typeof a === 'object' &&
     typeof a.id === 'string' && a.id.length <= 40 &&
-    typeof a.sym === 'string' && ALERT_SYM_RE.test(a.sym) &&
+    typeof a.sym === 'string' && isValidSymbol(a.sym) &&
     ALERT_CONDS.includes(a.cond) &&
     Number.isFinite(a.value) && Math.abs(a.value) < 1e9;
 }
 
 function validHistoryEntry(h) {
   return !!h && typeof h === 'object' &&
-    typeof h.sym === 'string' && ALERT_SYM_RE.test(h.sym) &&
+    typeof h.sym === 'string' && isValidSymbol(h.sym) &&
     ALERT_CONDS.includes(h.cond) &&
     Number.isFinite(h.value) && Math.abs(h.value) < 1e9 &&
     Number.isFinite(h.price) && h.price >= 0 &&
@@ -180,7 +179,7 @@ export function initAlerts() {
     const sym = $('al-sym').value.trim().toUpperCase();
     const cond = $('al-cond').value;
     const value = parseFloat($('al-val').value);
-    if (!/^[A-Z0-9.\-^]{1,10}$/.test(sym)) { flashHint('symbol: up to 10 chars (A-Z 0-9 . - ^)'); return; }
+    if (!isValidSymbol(sym)) { flashHint('symbol: up to 10 chars (A-Z 0-9 . - ^)'); return; }
     if (!getTracker(sym)) { flashHint(sym + ' is not tracked — add it via TRACKERS first'); return; }
     if (!isFinite(value)) { flashHint('enter a trigger value'); return; }
     if (alerts.active.some(a => a.sym === sym && a.cond === cond && a.value === value)) {

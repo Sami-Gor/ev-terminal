@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="/src/frontend/styles/grid.css">
 <link rel="stylesheet" href="/src/frontend/styles/panels.css">
 <link rel="stylesheet" href="/src/frontend/styles/analytics.css">
-<script>window.addEventListener("error",e=>{const d=document.createElement("div");d.id="boot-err";d.textContent="ERR "+(e.message||"?")+" @ "+String(e.filename||"").split("/").pop()+":"+e.lineno;document.body.appendChild(d)});</script>
+<script src="/src/frontend/boot-error.js"></script>
 <script type="module" src="/src/frontend/main.js"></script>
 </head>
 <body>
@@ -20,7 +20,7 @@
     <div class="head-right">
       <span class="badge" id="alert-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="alert-pop" style="cursor:pointer;user-select:none">✧ ALERTS <b id="alert-count" style="color:var(--amber)"></b></span>
       <span class="badge" id="up-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="up-pop" style="cursor:pointer;user-select:none">⬆ UPGRADE</span>
-      <span class="badge" id="trade-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="trade-pop" style="cursor:pointer;user-select:none">⚡ TRADE</span>
+      <span class="badge" id="trade-btn" role="button" tabindex="0" aria-haspopup="true" aria-expanded="false" aria-controls="trade-pop" style="display:none;cursor:pointer;user-select:none">⚡ TRADE</span>
       <span class="badge" id="tk-btn" style="cursor:pointer;user-select:none">TRACKERS ▾</span>
       <span class="badge" id="cards-btn" style="cursor:pointer;user-select:none">CARDS ▾</span>
       <span class="badge" id="conn-badge" role="status" aria-live="polite">● CONNECTING…</span>
@@ -41,8 +41,13 @@
       <p style="color:var(--dim);font-size:9px;margin-top:6px">No spam. Your email is stored only by the operator and never published.</p>
     </div>
     <div class="cards-pop" id="trade-pop" role="dialog" aria-label="Quick trade">
-      <div class="cp-title">QUICK TRADE · ALPACA <span class="stateb" id="qt-paper">PAPER</span></div>
-      <div id="qt-account" style="color:var(--txt);font-size:10.5px;margin-bottom:6px">—</div>
+      <div class="cp-title">QUICK TRADE · ALPACA <span class="stateb" id="qt-paper">MODE UNKNOWN</span></div>
+      <div class="tkf" style="grid-template-columns:1fr 72px">
+        <input id="qt-token" type="password" placeholder="TRADING_API_TOKEN" autocomplete="off" title="private trading token — stored in this browser session only">
+        <button class="tbtn" id="qt-token-apply" title="save the trading token for this browser session">UNLOCK</button>
+      </div>
+      <div class="hint" id="qt-token-hint">token stays in this browser session only · sent as Authorization: Bearer</div>
+      <div id="qt-account" style="color:var(--txt);font-size:10.5px;margin:6px 0">—</div>
       <div class="tkf" style="grid-template-columns:1fr 1fr 56px">
         <input id="qt-symbol" placeholder="SYM" maxlength="10" title="tracked symbol">
         <select id="qt-type" title="order type"><option value="market">MARKET</option><option value="limit">LIMIT</option></select>
@@ -55,7 +60,7 @@
         <label class="row" style="flex:1;justify-content:center;border:1px solid var(--line);padding:4px"><input type="radio" name="qt-side" value="buy" checked> BUY</label>
         <label class="row" style="flex:1;justify-content:center;border:1px solid var(--line);padding:4px"><input type="radio" name="qt-side" value="sell"> SELL</label>
       </div>
-      <button class="addbtn" id="qt-submit">SUBMIT ORDER</button>
+      <button class="addbtn" id="qt-submit" disabled>SUBMIT ORDER</button>
       <div class="hint" id="qt-msg"></div>
       <div class="cp-title" style="margin-top:8px">OPEN POSITIONS · LIVE P&amp;L</div>
       <table class="mini" style="width:100%"><tbody id="qt-positions"></tbody></table>

@@ -17,11 +17,17 @@ import java.util.concurrent.TimeUnit
  */
 object NetworkModule {
 
-    /** WebSocket endpoint — debug: ws://10.0.2.2:3000, release: wss://your-domain.com. */
+    /** WebSocket endpoint from BuildConfig — debug defaults to the emulator host
+     *  (ws://10.0.2.2:3000); release requires an explicit wss:// URL. */
     val wsBaseUrl: String = BuildConfig.WS_BASE_URL
 
-    /** REST endpoint — debug: http://10.0.2.2:3000, release: https://your-domain.com. */
+    /** REST endpoint from BuildConfig — debug defaults to http://10.0.2.2:3000;
+     *  release requires an explicit https:// URL. */
     val restBaseUrl: String = BuildConfig.REST_BASE_URL
+
+    /** Origin header sent with REST/WS requests. This is a backend allowlist
+     *  compatibility header (CORS echo + WS upgrade gate) — NOT authentication. */
+    val apiOrigin: String = BuildConfig.API_ORIGIN
 
     /** Thread-safe lazy singleton (SYNCHRONIZED by default). */
     val okHttpClient: OkHttpClient by lazy {

@@ -4,7 +4,6 @@
  */
 import { universe, SECTORS, getTracker, connection } from '../services/store.js';
 import { bus } from '../services/store.js';
-import { removeTracker } from './trackers.js';
 import { $, fnum, fchg, fpct, ARROW, CLS } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
 
@@ -36,7 +35,7 @@ export function renderTickerTable() {
   });
   tbody.querySelectorAll('td.rm').forEach(td => td.addEventListener('click', e => {
     e.stopPropagation();
-    removeTracker(td.dataset.rm);
+    bus.emit('tracker:remove', td.dataset.rm);
   }));
   $('tk-search').addEventListener('input', e => filterTickerTable(e.target.value));
 }

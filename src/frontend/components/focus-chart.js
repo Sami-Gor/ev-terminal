@@ -4,11 +4,10 @@
  * draggable Entry/SL/TP lines, and the pinned-bar inspector.
  */
 import { chartState, getTracker } from '../services/store.js';
-import { bus } from '../services/store.js';
 import { API_BASE, fetchJson } from '../services/api.js';
 import { DATES } from '../utils/demo-engine.js';
 import { atr14, structurePivots, detectZones } from '../utils/indicators.mjs';
-import { $, fnum, fchg, fpct, fvol, fmtBig, ARROW, CLS } from '../utils/format.js';
+import { $, fnum, fchg, fvol, fmtBig, CLS } from '../utils/format.js';
 import { upColor, downColor, upRgb, downRgb } from '../utils/theme.js';
 
 // ---- module state -------------------------------------------------------
@@ -55,7 +54,6 @@ function updateRiskOut() {
 }
 
 // ---- MTF (multi-timeframe) ---------------------------------------------
-const mtfPending = new Set();
 
 function fetchMTF(sym) {
   ['4h', '15m'].forEach(timeframe => {

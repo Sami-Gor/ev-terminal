@@ -6,6 +6,8 @@ require('dotenv').config();
 const path = require('path');
 
 const PORT = Number(process.env.PORT) || 3000;
+/** Listen address. Defaults to loopback; set HOST=0.0.0.0 for intentional LAN use. */
+const HOST = process.env.HOST || '127.0.0.1';
 const POLYGON_KEY = process.env.POLYGON_API_KEY || '';
 const FMP_KEY = process.env.FMP_API_KEY || '';
 // Presence flags for honest diagnostics — values are never exported or logged.
@@ -31,9 +33,6 @@ const FORCE_SIMULATED = DISTRIBUTION_MODE === 'public';
 // the only place a provider can be selected from.
 const PROVIDER_MODE = FORCE_SIMULATED ? 'demo' : POLYGON_KEY ? 'polygon' : FMP_KEY ? 'fmp' : 'demo';
 
-const ENV_POLL = Number(process.env.POLL_INTERVAL_MS);
-const POLL_INTERVAL_MS = ENV_POLL > 0 ? ENV_POLL
-  : PROVIDER_MODE === 'polygon' ? 15000 : PROVIDER_MODE === 'fmp' ? 6000 : 2000;
 const HISTORY_TTL_MS = 10 * 60 * 1000;
 const FINANCIALS_TTL_MS = 30 * 60 * 1000;
 
@@ -54,9 +53,14 @@ const USE_MOCK_DATA_RAW = process.env.USE_MOCK_DATA;
 const USE_MOCK_DATA = FORCE_SIMULATED || (USE_MOCK_DATA_RAW === undefined || USE_MOCK_DATA_RAW === ''
   ? (PROVIDER_MODE === 'demo')
   : USE_MOCK_DATA_RAW === 'true');
-const DEFAULT_POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) > 0
+
+/** Background market-poll interval — single source of truth for the poller
+ *  and the startup log. In polygon mode the trade stream pushes ticks and the
+ *  poller only performs the REST resync below. */
+const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS) > 0
   ? Number(process.env.POLL_INTERVAL_MS)
   : (USE_MOCK_DATA ? 2000 : PROVIDER_MODE === 'fmp' ? 6000 : 15000);
+const POLYGON_REST_RESYNC_MS = 60000;
 
 /** WebSocket hardening limits. */
 const WS_MAX_SYMBOLS_PER_CLIENT = 50;
@@ -72,8 +76,16 @@ const ALPACA_API_KEY = process.env.ALPACA_API_KEY || '';
 const ALPACA_SECRET_KEY = process.env.ALPACA_SECRET_KEY || '';
 const ALPACA_PAPER = process.env.ALPACA_PAPER !== 'false';
 
+/** Trading access token (Authorization: Bearer). Never logged or sent to clients.
+ *  Trading stays disabled — even with broker keys — until this is set. */
+const TRADING_TOKEN = process.env.TRADING_API_TOKEN || '';
+/** Public capability flag for the UI: trading is impossible in public mode and
+ *  requires both a configured token (broker key presence is checked per request). */
+const TRADING_ENABLED = !FORCE_SIMULATED && TRADING_TOKEN !== '';
+
 module.exports = {
   PORT,
+  HOST,
   POLYGON_KEY,
   POLYGON_KEY_PRESENT,
   FMP_KEY,
@@ -82,8 +94,8 @@ module.exports = {
   FORCE_SIMULATED,
   PROVIDER_MODE,
   POLL_INTERVAL_MS,
+  POLYGON_REST_RESYNC_MS,
   USE_MOCK_DATA,
-  DEFAULT_POLL_INTERVAL_MS,
   HISTORY_TTL_MS,
   FINANCIALS_TTL_MS,
   ALLOWED_ORIGINS,
@@ -94,4 +106,6 @@ module.exports = {
   ALPACA_API_KEY,
   ALPACA_SECRET_KEY,
   ALPACA_PAPER,
+  TRADING_TOKEN,
+  TRADING_ENABLED,
 };

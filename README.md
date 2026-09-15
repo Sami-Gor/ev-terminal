@@ -52,6 +52,8 @@ cp .env.example .env
 | `POLYGON_API_KEY` | *(empty)* | Polygon.io REST key. Enables real daily aggregates, intraday 4H/15M bars and snapshot quotes. |
 | `FMP_API_KEY` | *(empty)* | FinancialModelingPrep key. Enables real daily history, batch quotes and fundamentals (key-metrics-TTM, income statements). |
 | `PORT` | `3000` | HTTP + WebSocket listen port. |
+| `HOST` | `127.0.0.1` | Listen address. Loopback by default; set `0.0.0.0` only for intentional LAN/remote access. |
+| `TRADING_API_TOKEN` | *(empty)* | Bearer token required for private/self-hosted trading access. It does **not** override `DISTRIBUTION_MODE=public`, which always disables trading regardless of credentials. |
 | `ALLOWED_ORIGINS` | localhost variants | Comma-separated origins allowed to call the API and open the WebSocket feed. |
 
 Provider priority: **Polygon → FMP → simulated**. Keys are read only by `src/backend/config`; they are never sent to the browser or written to logs.
@@ -71,16 +73,48 @@ The UI reflects this: simulated runs badge **`● SIMULATED ENGINE`** (amber, ne
 
 `android/` is a **native Kotlin companion client** (not a WebView wrapper): an OkHttp WebSocket client + ViewModel consume the same Node feed, and a Jetpack Compose dashboard renders tickers, an EV-fleet telemetry HUD and the news wire. It shares the backend's protocol (subscribe payload, tick schema) and licensing posture. `ANDROID_PERFORMANCE_AUDIT.md` documents that module's performance, state-hygiene and recomposition audit — lazy-list keys, flow conflation, process-lifecycle socket gating — and the fixes applied against it.
 
+### Android endpoints and network security
+
+Endpoints are supplied at build time through Gradle properties (`-P…`) or the
+matching environment variables. **Debug defaults target the local dev server;
+release values must be provided explicitly and use HTTPS/WSS.** No endpoint is
+committed, and never put secrets in these values.
+
+| Build | Property / env var | Required | Default |
+|---|---|---|---|
+| Debug | `EVT_DEBUG_API_BASE_URL` | no | `http://10.0.2.2:3000` (emulator host) |
+| Debug | `EVT_DEBUG_WS_URL` | no | `ws://10.0.2.2:3000` |
+| Debug | `EVT_DEBUG_API_ORIGIN` | no | `http://localhost:3000` (backend allowlist) |
+| Release | `EVT_API_BASE_URL` | **yes** | — must be `https://` |
+| Release | `EVT_WS_URL` | **yes** | — must be `wss://` |
+| Release | `EVT_API_ORIGIN` | no | derived from `EVT_API_BASE_URL` |
+
+```bash
+# Debug against the emulator (defaults already do this)
+./gradlew :app:assembleDebug
+
+# Release: explicit secure endpoints, fail-fast if missing or non-secure
+./gradlew :app:assembleRelease \
+    -PEVT_API_BASE_URL=https://api.example.com \
+    -PEVT_WS_URL=wss://api.example.com
+```
+
+The `Origin` header the client sends is a backend allowlist compatibility header
+(CORS echo + WebSocket upgrade gate) — it is **not** authentication. Release
+builds disallow general cleartext traffic via
+`android/app/src/main/res/xml/network_security_config.xml`; debug builds override
+that file to permit cleartext for `10.0.2.2`, `localhost` and `127.0.0.1` only.
+
 ## Architecture
 
 ```
 public/index.html            markup only (no inline CSS/JS)
 src/frontend/
   main.js                    boot orchestrator (deterministic init order)
-  components/                15 panels/widgets: focus-chart · heatmap · ticker-table · tape ·
-                             sector · news · metals · clock · index-map-free layout ·
-                             financials · journal · correlation · alerts · trackers ·
-                             layout-manager · connection-indicator
+  components/                16 panels/widgets: focus-chart · heatmap · ticker-table · tape ·
+                             sector · news · clock · financials · journal · correlation ·
+                             alerts · trackers · trading · upgrade-banner · layout-manager ·
+                             connection-indicator
   services/                  store (state + bus) · api (REST) · ws-client (feed) ·
                              render-scheduler (rAF tick buffer)
   utils/                     format · indicators (ATR/zigzag/pearson/zones) · sanitize ·
@@ -89,13 +123,17 @@ src/frontend/
 src/backend/
   config/index.js            environment & constants
   providers/                 demo (simulated feed) · polygon · fmp · financials
-  routes/                    status · history · quote · financials
-  services/                  market-data (caching/orchestration) · ttl-cache · symbol-utils
-  websocket/feed-manager.js  origin gate, per-client subscriptions, heartbeat, poller
+  routes/                    status · history · quote · financials · market · news ·
+                             config · trade (token-gated) · upgrade-interest
+  services/                  market-data (provider orchestration + TTL caches) ·
+                             market-poller · market-cache · mock-telemetry · ttl-cache ·
+                             symbol-utils · seeded-random · brokerClient · trading-guard ·
+                             order-validation · NewsCorrelationEngine · upgrade-interest
+  websocket/feed-manager.js  origin gate, per-client subscriptions, heartbeat, broadcast
 app + entry                  src/backend/app.js (Express assembly) · server.js (entry)
 ```
 
-*45 files total: 25 frontend JS modules, 14 backend JS modules, 4 stylesheets, plus `server.js` and `public/index.html`.*
+*62 files total: 26 frontend JS modules, 30 backend JS modules, 4 stylesheets, plus `server.js` and `public/index.html`.*
 
 Data flow: `provider → market-data service (TTL cache) → REST/WS → store → render-scheduler (rAF) → in-place DOM patches`. Chart redraws are throttled full renders only when price escapes the rendered range; everything else patches in place.
 

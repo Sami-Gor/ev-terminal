@@ -35,8 +35,9 @@ class TerminalWebSocketClient(
     private val url: String = NetworkModule.wsBaseUrl,
     /** Symbols subscribed on open; an empty list receives the full board. */
     private val symbols: List<String> = DEFAULT_SYMBOLS,
-    /** The backend allowlists upgrade requests by Origin header. */
-    private val origin: String = DEFAULT_ORIGIN,
+    /** The backend allowlists upgrade requests by Origin header (compatibility
+     *  header only — WebSocket authentication is out of scope here). */
+    private val origin: String = NetworkModule.apiOrigin,
     /** Shared singleton client — do not build a second one. */
     private val client: OkHttpClient = NetworkModule.okHttpClient
 ) {
@@ -140,7 +141,6 @@ class TerminalWebSocketClient(
     }.getOrNull()
 
     companion object {
-        const val DEFAULT_ORIGIN = "http://localhost:3000"
         val DEFAULT_SYMBOLS = listOf("TSLA", "RIVN")
         const val NORMAL_CLOSE_CODE = 1000
         const val RECONNECT_MAX_MS = 30_000L

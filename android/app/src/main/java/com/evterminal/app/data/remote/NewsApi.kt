@@ -10,7 +10,8 @@ import org.json.JSONObject
 /** REST access to the enriched news wire (GET /api/news). */
 class NewsApi(
     private val baseUrl: String = NetworkModule.restBaseUrl,
-    private val origin: String = DEFAULT_ORIGIN,
+    /** Origin header expected by the backend allowlist — not authentication. */
+    private val origin: String = NetworkModule.apiOrigin,
     /** Shared singleton client — same pool/dispatcher as the WebSocket feed. */
     private val client: OkHttpClient = NetworkModule.okHttpClient
 ) {
@@ -29,9 +30,5 @@ class NewsApi(
                 NewsEvent.fromArray(root.optJSONArray("news") ?: return@runCatching emptyList())
             }
         }.getOrDefault(emptyList())
-    }
-
-    companion object {
-        const val DEFAULT_ORIGIN = "http://localhost:3000"
     }
 }

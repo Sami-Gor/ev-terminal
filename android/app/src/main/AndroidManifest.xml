@@ -8,9 +8,10 @@
     <application
         android:label="EVT Terminal"
         android:supportsRtl="true"
-        android:usesCleartextTraffic="true">
-        <!-- usesCleartextTraffic allows the ws:// dev endpoint (10.0.2.2:3000 from the
-             emulator). Production builds should use wss:// and drop this flag. -->
+        android:networkSecurityConfig="@xml/network_security_config">
+        <!-- Release/default posture: system CAs only, general cleartext disallowed.
+             Debug builds override res/xml/network_security_config.xml to permit
+             local development hosts only. -->
 
         <activity
             android:name=".ui.MainActivity"

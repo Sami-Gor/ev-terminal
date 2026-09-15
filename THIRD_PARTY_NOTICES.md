@@ -13,7 +13,7 @@ This project is distributed under the [MIT License](LICENSE) and depends on the 
 | [array-flatten](https://github.com/blakeembrey/array-flatten) | 1.1.1 | MIT |
 | [asynckit](https://github.com/alexindigo/asynckit#readme) | 0.4.0 | MIT |
 | [axios](https://axios-http.com) | 1.20.0 | MIT |
-| [body-parser](expressjs/body-parser) | 1.20.6 | MIT |
+| [body-parser](expressjs/body-parser) | 1.20.8 | MIT |
 | [bytes](visionmedia/bytes.js) | 3.1.2 | MIT |
 | [call-bind-apply-helpers](https://github.com/ljharb/call-bind-apply-helpers#readme) | 1.0.2 | MIT |
 | [call-bound](https://github.com/ljharb/call-bound#readme) | 1.0.4 | MIT |
@@ -41,7 +41,7 @@ This project is distributed under the [MIT License](LICENSE) and depends on the 
 | [escalade](lukeed/escalade) | 3.2.0 | MIT |
 | [escape-html](component/escape-html) | 1.0.3 | MIT |
 | [etag](jshttp/etag) | 1.8.1 | MIT |
-| [express](http://expressjs.com/) | 4.22.2 | MIT |
+| [express](http://expressjs.com/) | 4.22.3 | MIT |
 | [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) | 8.7.0 | MIT |
 | [finalhandler](pillarjs/finalhandler) | 1.3.2 | MIT |
 | [follow-redirects](https://github.com/follow-redirects/follow-redirects) | 1.16.0 | MIT |
@@ -84,7 +84,7 @@ This project is distributed under the [MIT License](LICENSE) and depends on the 
 | [proxy-from-env](https://github.com/Rob--W/proxy-from-env#readme) | 2.1.0 | MIT |
 | [puppeteer](https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer) | 25.10.0 | Apache-2.0 |
 | [puppeteer-core](https://github.com/puppeteer/puppeteer/tree/main/packages/puppeteer-core) | 25.10.0 | Apache-2.0 |
-| [qs](https://github.com/ljharb/qs) | 6.15.3 | BSD-3-Clause |
+| [qs](https://github.com/ljharb/qs) | 6.16.0 | BSD-3-Clause |
 | [range-parser](jshttp/range-parser) | 1.2.1 | MIT |
 | [raw-body](stream-utils/raw-body) | 2.5.3 | MIT |
 | [safe-buffer](https://github.com/feross/safe-buffer) | 5.2.1 | MIT |

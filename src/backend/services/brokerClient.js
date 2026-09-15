@@ -9,7 +9,6 @@
  */
 const axios = require('axios');
 const config = require('../config');
-const { createError } = require('./symbol-utils');
 
 const PAPER_BASE = 'https://paper-api.alpaca.markets';
 const LIVE_BASE = 'https://api.alpaca.markets';
@@ -27,22 +26,6 @@ function client() {
       'APCA-API-SECRET-KEY': config.ALPACA_SECRET_KEY,
     },
   });
-}
-
-const { badRequest } = require('./symbol-utils');
-
-/** Wraps an Alpaca error into a generic operational message. */
-function brokerError(e, fallback) {
-  const status = e.response ? e.response.status : 0;
-  const err = new Error(
-    status === 401 || status === 403 ? 'Broker authentication failed — check ALPACA keys'
-      : status === 429 ? 'Broker rate limited — retry shortly'
-        : fallback
-  );
-  err.status = status >= 500 ? 502 : 502;
-  err.publicMessage = err.message;
-  console.error(`[brokerClient] ${e.message}`);
-  return err;
 }
 
 /** Account equity / cash / buying power. */
@@ -75,12 +58,12 @@ async function getPositions() {
 }
 
 /**
- * Submits an order.
- *   market:  { symbol, qty, side: 'buy'|'sell' }
- *   limit:   { symbol, qty, side, limitPrice }
- * Both default to time_in_force 'day'.
+ * Builds the Alpaca order request body (exported for tests).
+ * A valid clientOrderId is forwarded as client_order_id: Alpaca rejects a
+ * duplicate id for the same account, which makes a retried transport request
+ * idempotent instead of creating a second order.
  */
-async function submitOrder({ symbol, qty, side, type = 'market', limitPrice, timeInForce = 'day' }) {
+function buildOrderBody({ symbol, qty, side, type = 'market', limitPrice, timeInForce = 'day', clientOrderId }) {
   const body = {
     symbol,
     qty: String(qty),
@@ -89,7 +72,21 @@ async function submitOrder({ symbol, qty, side, type = 'market', limitPrice, tim
     time_in_force: timeInForce,
   };
   if (type === 'limit') body.limit_price = String(limitPrice);
-  const { data } = await client().post('/v2/orders', body);
+  if (clientOrderId) body.client_order_id = clientOrderId;
+  return body;
+}
+
+/**
+ * Submits an order.
+ *   market:  { symbol, qty, side: 'buy'|'sell' }
+ *   limit:   { symbol, qty, side, limitPrice }
+ * Both default to time_in_force 'day'.
+ *
+ * The shared client performs no automatic POST retries (plain axios, no
+ * retry interceptor), so one call maps to at most one broker request.
+ */
+async function submitOrder(order) {
+  const { data } = await client().post('/v2/orders', buildOrderBody(order));
   return {
     id: data.id,
     symbol: data.symbol,
@@ -133,4 +130,4 @@ async function cancelOrder(id) {
   await client().delete(`/v2/orders/${encodeURIComponent(id)}`);
 }
 
-module.exports = { configured, getAccount, getPositions, submitOrder, closePosition, getOrders, cancelOrder };
+module.exports = { configured, getAccount, getPositions, submitOrder, closePosition, getOrders, cancelOrder, buildOrderBody };

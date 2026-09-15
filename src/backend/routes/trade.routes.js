@@ -2,6 +2,15 @@
 
 /**
  * Private trading routes — direct Alpaca order routing for self-use.
+ *
+ * Stage 1 hardening (applied to every route below, in order):
+ *   1. public distribution mode answers 404 — the feature does not exist and
+ *      broker credentials are never used;
+ *   2. Authorization: Bearer <TRADING_API_TOKEN> is required (generic 401s,
+ *      constant-time comparison; 503 until a token is configured);
+ *   3. order payloads are validated and client_order_id forwarded so a
+ *      repeated transport retry maps to one broker order.
+ *
  * All endpoints return generic error envelopes; broker details (keys,
  * account ids) never appear in responses or logs.
  */
@@ -9,10 +18,16 @@ const express = require('express');
 const broker = require('../services/brokerClient');
 const marketData = require('../services/market-data');
 const { okSymbol, createError } = require('../services/symbol-utils');
+const { createAccessGate, createTokenGate } = require('../services/trading-guard');
+const { validateOrderBody } = require('../services/order-validation');
 
 const router = express.Router();
 
-const BROKER_NOT_CONFIGURED = 'Broker not configured — set ALPACA_API_KEY / ALPACA_SECRET_KEY in .env';
+/* Stage 1 gates — must stay ahead of every route handler. */
+router.use(createAccessGate());
+router.use(createTokenGate());
+
+const BROKER_NOT_CONFIGURED = 'Broker not configured';
 
 /** Merges the latest cache price into a position for live P&L. */
 function withLivePrice(positions) {
@@ -44,23 +59,10 @@ router.get('/positions', requireBroker, async (req, res, next) => {
 });
 
 router.post('/orders', requireBroker, async (req, res, next) => {
-  const { symbol, side, qty, type = 'market', limitPrice, timeInForce = 'day' } = req.body || {};
-  const sym = String(symbol || '').toUpperCase();
-  if (!okSymbol(sym)) return next(createError(400, 'Invalid symbol'));
-  if (side !== 'buy' && side !== 'sell') return next(createError(400, 'Side must be buy or sell'));
-  const qtyNum = Number(qty);
-  if (!Number.isFinite(qtyNum) || qtyNum <= 0 || qtyNum > 100000) return next(createError(400, 'Invalid qty'));
-  if (type !== 'market' && type !== 'limit') return next(createError(400, 'Type must be market or limit'));
-  if (type === 'limit' && !(Number(limitPrice) > 0)) return next(createError(400, 'Limit orders require a positive limit price'));
+  const validation = validateOrderBody(req.body);
+  if (!validation.ok) return next(createError(400, validation.error));
   try {
-    const order = await broker.submitOrder({
-      symbol: sym,
-      qty: qtyNum,
-      side,
-      type,
-      limitPrice: Number(limitPrice),
-      timeInForce,
-    });
+    const order = await broker.submitOrder(validation.order);
     res.json({ ok: true, order });
   } catch (e) {
     next(createError(502, 'Order rejected by broker', e.message));
