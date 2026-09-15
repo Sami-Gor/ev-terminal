@@ -10,7 +10,8 @@ import org.json.JSONObject
 /** REST access to the backend's in-memory market cache (GET /api/market). */
 class MarketApi(
     private val baseUrl: String = NetworkModule.restBaseUrl,
-    private val origin: String = DEFAULT_ORIGIN,
+    /** Origin header expected by the backend allowlist — not authentication. */
+    private val origin: String = NetworkModule.apiOrigin,
     /** Shared singleton client — same pool/dispatcher as the WebSocket feed. */
     private val client: OkHttpClient = NetworkModule.okHttpClient
 ) {
@@ -28,9 +29,5 @@ class MarketApi(
                 MarketSnapshot.fromJson(JSONObject(body))
             }
         }.getOrNull()
-    }
-
-    companion object {
-        const val DEFAULT_ORIGIN = "http://localhost:3000"
     }
 }

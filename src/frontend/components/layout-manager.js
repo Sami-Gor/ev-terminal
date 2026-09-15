@@ -3,7 +3,7 @@
  * popover sync, and the empty-state guard. Persisted to localStorage.
  */
 import { $ } from '../utils/format.js';
-import { renderHeatmap } from './heatmap.js';
+import { bus } from '../services/store.js';
 
 const LAYOUT_KEY = 'evt-layout-v1';
 
@@ -43,7 +43,7 @@ export function applyLayout() {
     if (checkbox) checkbox.checked = show;
   });
   $('grid-empty').style.display = order.every(id => hidden.includes(id)) ? 'block' : 'none';
-  renderHeatmap();
+  bus.emit('layout:applied');              // heatmap re-measures its container width
 }
 
 function initLayoutManager() {

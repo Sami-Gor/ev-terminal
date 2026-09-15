@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release/default network security posture.
+  - Trust anchors: platform/system CAs only (no user-added CAs).
+  - General cleartext HTTP/WS is disallowed; release endpoints must be HTTPS/WSS.
+  Debug builds override this file (src/debug/res/xml/network_security_config.xml)
+  to permit cleartext to local development hosts only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

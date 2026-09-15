@@ -4,7 +4,6 @@
  */
 import { SECTORS, universe } from '../services/store.js';
 import { bus } from '../services/store.js';
-import { removeTracker } from './trackers.js';
 import { $, fnum, fpct, ARROW, CLS } from '../utils/format.js';
 import { tmLayout } from '../utils/indicators.mjs';
 import { upRgb, downRgb } from '../utils/theme.js';
@@ -44,13 +43,14 @@ export function renderHeatmap() {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bus.emit('focus', el.dataset.sym); }
     });
     const tx = el.querySelector('.tx');
-    if (tx) tx.addEventListener('click', e => { e.stopPropagation(); removeTracker(tx.dataset.rm); });
+    if (tx) tx.addEventListener('click', e => { e.stopPropagation(); bus.emit('tracker:remove', tx.dataset.rm); });
   });
 }
 
 let resizeTimer = null;
 export function initHeatmap() {
   renderHeatmap();
+  bus.on('layout:applied', renderHeatmap);   // card order/visibility changes its container width
   window.addEventListener('resize', () => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(renderHeatmap, 150);

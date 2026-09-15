@@ -13,7 +13,7 @@ import {
   chartState, bus,
 } from './services/store.js';
 import { scheduleInitialLoads, ensureHistory } from './services/api.js';
-import { wsConnect, wsSubscribe, wsUnsubscribe, onTick as onTickMessage } from './services/ws-client.js';
+import { wsConnect, wsSubscribe, onTick as onTickMessage } from './services/ws-client.js';
 import { bufferTick, setRenderHandlers } from './services/render-scheduler.js';
 import { applyTheme, toggleHighContrast } from './utils/theme.js';
 
@@ -56,6 +56,7 @@ scheduleInitialLoads(universe);
 
 /* ---- 4. focus & analytics cards ---- */
 setFocus(chartState.focus);
+financials.initFinancials();     // binds the OVERVIEW / INCOME STATEMENT / MARGINS tabs
 initLayout();                   // needs rendered panels; re-applies persisted order
 trackers.initTrackers();        // inserts ± tools into rendered card headers
 focusChart.initChartControls();
@@ -73,6 +74,7 @@ $('hc-toggle').addEventListener('click', () => {
   sector.renderSector();
   correlation.render();
 });
+$('log-trade-btn').addEventListener('click', () => journal.logTrade(focusChart.getRiskSnapshot()));
 }
 
 /** Boot diagnostics: a failed init surfaces in the DOM instead of a dead page. */
@@ -96,6 +98,7 @@ setRenderHandlers({
     tape.updateSymbols(syms);
     tickerTable.updateRows(syms);
     focusChart.applyLiveTick(syms);
+    trading.updateRowsPnl(syms);                    // open-position P&L on live ticks (poll reconciles)
   },
   heavy() {                                         // coarse re-renders (500 ms gate)
     heatmap.renderHeatmap();

@@ -8,6 +8,7 @@
 const { PROVIDER_MODE } = require('../config');
 const { NewsEvent } = require('../model/NewsModel');
 const { enrichHeadline } = require('../services/NewsCorrelationEngine');
+const { hashSeed, mulberry32 } = require('../services/seeded-random');
 
 const DEFAULT_UNIVERSE = [
   { sym: 'TSLA', name: 'Tesla Inc', sector: 'PURE', base: 245 },
@@ -27,26 +28,6 @@ const DEFAULT_UNIVERSE = [
 
 const demoCache = new Map(); // sym → { bars, prevClose, price, volume }
 
-function hash(str) {
-  let h = 1779033703 ^ str.length;
-  for (let i = 0; i < str.length; i++) {
-    h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
-    h = (h << 13) | (h >>> 19);
-  }
-  return h >>> 0;
-}
-
-function mulberry32(seed) {
-  let a = seed;
-  return () => {
-    a |= 0;
-    a = (a + 0x6D2B79F5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 function lastWeekdays(count) {
   const out = [];
   const d = new Date();
@@ -60,7 +41,7 @@ function lastWeekdays(count) {
 
 function demoSeries(sym) {
   if (demoCache.has(sym)) return demoCache.get(sym);
-  const r = mulberry32(hash(sym + '|demo'));
+  const r = mulberry32(hashSeed(sym + '|demo'));
   const seeded = DEFAULT_UNIVERSE.find(u => u.sym === sym);
   // Registry is EV/battery-only: universe symbols anchor to realistic bases,
   // anything else (e.g. user-added custom trackers) gets a generic random walk.
@@ -116,7 +97,7 @@ function demoTick(sym) {
 /** Simulated 4H/15M intraday bars anchored to the symbol's current sim price. */
 function intradayBars(sym, timeframe) {
   const price = demoSeries(sym).price;
-  const r = mulberry32(hash(sym + '|' + timeframe));
+  const r = mulberry32(hashSeed(sym + '|' + timeframe));
   const cfg = timeframe === '4h'
     ? { count: 60, stepMin: 240, vol: 0.01, starts: [570, 810] }
     : { count: 60, stepMin: 15, vol: 0.0035, starts: Array.from({ length: 26 }, (_, i) => 570 + i * 15) };
@@ -152,7 +133,7 @@ function intradayBars(sym, timeframe) {
 }
 
 function simDeliveries(sym, sector) {
-  const r = mulberry32(hash(sym + '|dlv'));
+  const r = mulberry32(hashSeed(sym + '|dlv'));
   const unit = sector === 'PURE' ? 'vehicles' : 'GWh';
   const quarterly = sector === 'PURE' ? 4e4 + r() * 4.6e5 : 8 + r() * 110;
   const yoY = (r() - 0.25) * 0.9 * 100;
@@ -160,7 +141,7 @@ function simDeliveries(sym, sector) {
 }
 
 function demoFinancials(sym) {
-  const r = mulberry32(hash(sym + '|fin'));
+  const r = mulberry32(hashSeed(sym + '|fin'));
   const price = demoSeries(sym).price;
   const shares = 0.3e9 + r() * 3.5e9;
   const marketCap = price * shares;
@@ -248,5 +229,4 @@ module.exports = {
   demoNews,
   intradayBars,
   simDeliveries,
-  demoSeries,
 };

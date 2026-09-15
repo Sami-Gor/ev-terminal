@@ -22,6 +22,14 @@ const newsRoutes = require('./routes/news.routes');
 const app = express();
 app.disable('x-powered-by');
 
+/* connect-src follows the same allowlist as CORS (http(s) origins plus their
+ * ws(s) variants) instead of a separate hardcoded list that could drift. */
+const CONNECT_SRC = [
+  "'self'",
+  ...ALLOWED_ORIGINS,
+  ...ALLOWED_ORIGINS.map(o => o.replace(/^http/, 'ws')),
+];
+
 /* ---- security headers (CSP, X-Frame-Options, No-Sniff, Referrer-Policy…) -- */
 app.use(helmet({
   contentSecurityPolicy: {
@@ -31,7 +39,7 @@ app.use(helmet({
       'script-src': ["'self'"],
       'style-src': ["'self'", "'unsafe-inline'"],   // inline style="" attributes on panels
       'img-src': ["'self'", 'data:'],                // inline SVG favicon
-      'connect-src': ["'self'", 'ws://localhost:3000', 'wss://localhost:3000'],
+      'connect-src': CONNECT_SRC,
       'font-src': ["'self'"],
       'object-src': ["'none'"],
       'frame-ancestors': ["'none'"],
@@ -78,12 +86,13 @@ app.use('/api/market', marketRoutes);
 app.use('/api/news', newsRoutes);
 
 /* ---- sanitized error handling: never leak stacks, provider details or keys - */
-app.use((err, req, res, next) => {   // eslint-disable-line no-unused-vars
+app.use((err, req, res, next) => {
   const status = err.status || 500;
   console.error(`[api] ${req.method} ${req.originalUrl} → ${status}: ${err.message}`);
-  const publicMessage = status >= 500
-    ? 'Internal Server Error'
-    : (err.publicMessage || 'Bad Request');
+  // Intentional operational errors (createError with publicMessage) pass through;
+  // truly unexpected errors get a generic message with no internal details.
+  const publicMessage = err.publicMessage
+    || (status >= 500 ? 'Internal Server Error' : 'Bad Request');
   res.status(status).json({ error: publicMessage });
 });
 

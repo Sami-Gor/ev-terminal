@@ -3,6 +3,7 @@
  * camelCase accessors). Modules never reach into each other's internals;
  * they import this store and communicate via the event bus.
  */
+import { isValidSymbol } from '../utils/sanitize.js';
 
 /* ---------------- market data models ---------------- */
 
@@ -46,12 +47,10 @@ const TRACKER_KEY = 'evt-trackers-v1';
 const removedSyms = new Set();
 let addedTrackers = [];
 
-const SYM_RE = /^[A-Z0-9.\-^]{1,10}$/;
-
 /** Reject corrupted/untrusted tracker seeds read back from localStorage. */
 function validTrackerSeed(a) {
   return !!a && typeof a === 'object' &&
-    typeof a.sym === 'string' && SYM_RE.test(a.sym) &&
+    typeof a.sym === 'string' && isValidSymbol(a.sym) &&
     typeof a.name === 'string' && a.name.length <= 60 &&
     (a.sector === 'PURE' || a.sector === 'BATT') &&
     Number.isFinite(a.last) && a.last > 0 && a.last < 1e7 &&
@@ -104,7 +103,7 @@ function restoreTrackers() {
     return;                                        // corrupted record → clean reset
   }
   saved.removed.forEach(x => {
-    if (typeof x === 'string' && SYM_RE.test(x)) removedSyms.add(x.toUpperCase());
+    if (typeof x === 'string' && isValidSymbol(x)) removedSyms.add(x.toUpperCase());
   });
   universe = universe.filter(t => !removedSyms.has(t.sym));
   saved.added.forEach(a => {
@@ -161,6 +160,7 @@ export const connection = {
   provider: 'demo',
   distributionMode: 'local',      // resolved from GET /api/config at boot
   simulated: true,                // provider demo OR public distribution mode
+  tradingEnabled: false,          // resolved from GET /api/config (public mode → false)
   dataSrc: 'US demo ref',
 };
 
@@ -178,8 +178,6 @@ export function setConnection(patch) {
 }
 
 /* ---------------- tick fan-out ---------------- */
-
-const dirtySymbols = new Set();
 
 /** Apply a live tick to a tracker; returns true when a tracked symbol was hit. */
 export function applyTick(m) {
@@ -200,14 +198,4 @@ export function applyTick(m) {
     lastBar.l = Math.min(lastBar.l, t.last);
   }
   return true;
-}
-
-export function markDirty(sym) {
-  dirtySymbols.add(sym);
-}
-
-export function takeDirty() {
-  const ds = [...dirtySymbols];
-  dirtySymbols.clear();
-  return ds;
 }

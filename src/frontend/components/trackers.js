@@ -5,15 +5,13 @@
  */
 import {
   SECTORS, universe,
-  initTracker, addTrackerRecord, removeTrackerRecord, resetTrackers, saveTrackers,
+  initTracker, addTrackerRecord, removeTrackerRecord, resetTrackers,
 } from '../services/store.js';
 import { bus } from '../services/store.js';
 import { API_BASE, fetchJson } from '../services/api.js';
 import { wsSubscribe, wsUnsubscribe } from '../services/ws-client.js';
 import { $ } from '../utils/format.js';
-import { esc, sanitizeSymbol, sanitizeName } from '../utils/sanitize.js';
-
-const SYMBOL_RE = /^[A-Z0-9.\-^]{1,10}$/;
+import { esc, isValidSymbol, sanitizeSymbol, sanitizeName } from '../utils/sanitize.js';
 
 function flash(message) {
   const el = $('tk-hint');
@@ -31,7 +29,12 @@ export function renderTrackerPop() {
   }).join('') || '<div class="hint">no trackers — add one below</div>';
 }
 
-export function removeTracker(sym) {
+/**
+ * Remove a tracker (store mutation + WS unsubscribe + global re-render).
+ * Every caller goes through the 'tracker:remove' bus event so panels stay
+ * decoupled from this module — see initTrackers().
+ */
+function removeTracker(sym) {
   if (universe.length <= 1) { flash('cannot remove the last tracker'); return; }
   removeTrackerRecord(sym);
   wsUnsubscribe([sym]);
@@ -45,7 +48,7 @@ async function addTracker() {
   const sector = $('tk-sector').value;
   const typedLast = parseFloat($('tk-last').value);
   const typedPct = parseFloat($('tk-pct').value);
-  if (!sym) { flash('symbol: up to 10 chars (A-Z 0-9 . - ^)'); return; }
+  if (!isValidSymbol(sym)) { flash('symbol: up to 10 chars (A-Z 0-9 . - ^)'); return; }
   if (universe.some(t => t.sym === sym)) { flash(sym + ' is already tracked'); return; }
   flash('validating ' + sym + ' against backend…');
   let profile = null;
@@ -78,6 +81,7 @@ async function addTracker() {
 }
 
 export function initTrackers() {
+  bus.on('tracker:remove', sym => removeTracker(sym));   // heatmap ✕ / ticker-table ✕
   $('tk-add').addEventListener('click', addTracker);
   ['tk-sym', 'tk-last', 'tk-pct'].forEach(id => $(id).addEventListener('keydown', e => {
     if (e.key === 'Enter') addTracker();

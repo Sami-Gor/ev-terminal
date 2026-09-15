@@ -23,9 +23,10 @@ notes unless you prefer to remain anonymous.
 | Control | Where |
 |---|---|
 | Helmet security headers (CSP, nosniff, frame protection, HSTS) | `src/backend/app.js` |
-| Origin-restricted CORS (no wildcard) | `src/backend/app.js` + `ALLOWED_ORIGINS` |
+| Allowlisted CORS echo — browser read control only; non-browser clients are not blocked by CORS (the WS upgrade gate below is the enforced origin check) | `src/backend/app.js` + `ALLOWED_ORIGINS` |
 | API rate limiting — 100 req / 15 min / IP on `/api/*` | `src/backend/app.js` |
 | WebSocket origin verification at the HTTP upgrade handshake | `src/backend/websocket/feed-manager.js` |
+| Trading routes: Bearer-token gate (`TRADING_API_TOKEN`, constant-time compare), `404` in public mode | `src/backend/services/trading-guard.js` + `src/backend/routes/trade.routes.js` |
 | WS message cap (4 KB), 50-symbol per-socket limit, 30 s ping/pong heartbeat | `src/backend/websocket/feed-manager.js` |
 | Generic error responses — no stacks, provider details or keys in bodies | `src/backend/routes/*`, `src/backend/app.js` |
 | XSS — `esc()` sanitization of all user/storage-derived values before `innerHTML` | `src/frontend/utils/sanitize.js` + components |

@@ -4,18 +4,17 @@
  * and persisted to localStorage. Metrics + equity curve summarize results.
  */
 import { getTracker } from '../services/store.js';
-import { $, fnum, fmtBig, CLS } from '../utils/format.js';
-import { esc } from '../utils/sanitize.js';
+import { $, fnum, fmtBig } from '../utils/format.js';
+import { esc, isValidSymbol } from '../utils/sanitize.js';
 
 const JOURNAL_KEY = 'evt-journal-v1';
-const TRADE_SYM_RE = /^[A-Z0-9.\-^]{1,10}$/;
 let journal = [];
 
 /** Reject corrupted/untrusted trade records read back from localStorage. */
 function validTrade(t) {
   return !!t && typeof t === 'object' &&
     typeof t.id === 'string' && t.id.length <= 40 &&
-    typeof t.sym === 'string' && TRADE_SYM_RE.test(t.sym) &&
+    typeof t.sym === 'string' && isValidSymbol(t.sym) &&
     (t.type === 'LONG' || t.type === 'SHORT') &&
     Number.isFinite(t.entry) && t.entry > 0 && t.entry < 1e7 &&
     Number.isFinite(t.sl) && t.sl > 0 && t.sl < 1e7 &&
@@ -97,8 +96,12 @@ export function resolveAll() {
 /** Log a paper trade from the chart's risk toolbar snapshot. */
 export function logTrade(snapshot) {
   const t = getTracker(snapshot.sym);
-  if (!t || !t.hist) return { ok: false, message: 'chart not ready' };
+  if (!t || !t.hist) {
+    flash('chart not ready');
+    return { ok: false, message: 'chart not ready' };
+  }
   if (snapshot.entry == null || snapshot.sl == null || Math.abs(snapshot.entry - snapshot.sl) < 1e-9) {
+    flash('entry and stop must differ');
     return { ok: false, message: 'entry and stop must differ' };
   }
   const trade = {
@@ -118,6 +121,7 @@ export function logTrade(snapshot) {
   journal.push(trade);
   save();
   render();
+  flash(`${trade.sym} ${trade.type} logged @ ${fnum(trade.entry)}`);
   return { ok: true, message: `${trade.sym} ${trade.type} logged @ ${fnum(trade.entry)} · TP ${fnum(trade.tp)}` };
 }
 

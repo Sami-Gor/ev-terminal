@@ -2,13 +2,20 @@
  * api.js — REST service layer. All network calls flow through here;
  * components never call fetch() directly.
  */
-import { bus, setConnection, connection, finalizeFromHistory, chartState } from './store.js';
+import { bus, setConnection, finalizeFromHistory, chartState } from './store.js';
 
 import { DATES, genHist } from '../utils/demo-engine.js';
 
-export const API_BASE = (location.protocol.startsWith('http') && location.port === '3000')
-  ? '' : 'http://127.0.0.1:3000';
-export const WS_URL = 'ws://localhost:3000';
+/** Fallback origin for pages not served by the app itself (dev ports). */
+export const API_ORIGIN = 'http://127.0.0.1:3000';
+
+const SERVED_BY_APP = location.protocol.startsWith('http') && location.port === '3000';
+
+export const API_BASE = SERVED_BY_APP ? '' : API_ORIGIN;
+/** WS endpoint: same host when served by the app, local dev server otherwise. */
+export const WS_URL = SERVED_BY_APP
+  ? (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host
+  : 'ws://localhost:3000';
 
 /** GET JSON with unified error shape (err.status / err.message). */
 export async function fetchJson(path) {
@@ -82,8 +89,8 @@ function connectionProvider() {
 }
 
 /**
- * Resolves the server's public configuration (distribution mode, upgrade hook,
- * broker referral block). Called once at boot before the UI settles labels.
+ * Resolves the server's public configuration (distribution mode, trading
+ * capability). Called once at boot before the UI settles labels.
  */
 export async function fetchAppConfig() {
   try {
@@ -92,8 +99,7 @@ export async function fetchAppConfig() {
       restOk: true,
       provider: cfg.dataMode === 'simulated' ? 'demo' : connectionProvider(),
       distributionMode: cfg.distributionMode || 'local',
-      broker: cfg.broker || null,
-      upgradeInterestEnabled: cfg.upgradeInterestEnabled !== false,
+      tradingEnabled: cfg.tradingEnabled === true,
     });
     return cfg;
   } catch (e) {

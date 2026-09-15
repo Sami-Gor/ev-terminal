@@ -7,7 +7,7 @@
 const SYMBOL_RE = /^[A-Za-z0-9.\-^]{1,10}$/;
 
 function okSymbol(sym) {
-  return SYMBOL_RE.test(sym);
+  return typeof sym === 'string' && SYMBOL_RE.test(sym);
 }
 
 function createError(status, publicMessage, internalDetail) {
