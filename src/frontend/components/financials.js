@@ -162,7 +162,7 @@ function draw(d) {
     body.innerHTML = `${note}${toggle}
       <table class="fin">
         <tr><th>PERIOD</th><th>TOTAL REVENUE</th><th>NET INCOME</th><th>R&amp;D SPEND</th><th>GROSS MARGIN TREND</th></tr>
-        ${rows.map(h => `<tr><td class="lbl">${esc(h.label)}</td><td>${fmtBig(h.revenue)}</td><td class="${CLS(h.netIncome || 0)}">${fmtBig(h.netIncome)}</td><td>${fmtBig(h.rd)}</td><td>${marginBar(h.revenue ? (h.netIncome || 0) / h.revenue : null)}</td></tr>`).join('')}
+        ${rows.map(h => `<tr><td class="lbl">${esc(h.label)}</td><td>${fmtBig(h.revenue)}</td><td class="${CLS(h.netIncome || 0)}">${fmtBig(h.netIncome)}</td><td>${fmtBig(h.rd)}</td><td>${marginBar(h.revenue && Number.isFinite(h.netIncome) ? h.netIncome / h.revenue : null)}</td></tr>`).join('')}
         ${ttmRow}
       </table>`;
   } else if (activeTab === 'bs') {

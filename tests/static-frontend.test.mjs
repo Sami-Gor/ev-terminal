@@ -170,3 +170,12 @@ test('ticker-table state/source cells track connection changes', () => {
   const subs = [...TABLE.matchAll(/bus\.on\('connection'/g)].length;
   assert.equal(subs, 1, 'exactly one connection subscription');
 });
+
+test('missing values are never rendered as zero (margin bars and money formatting)', () => {
+  const FIN = fs.readFileSync(path.join(ROOT, 'src', 'frontend', 'components', 'financials.js'), 'utf8');
+  assert.ok(!/marginBar\(h\.revenue \? \(h\.netIncome \|\| 0\)/.test(FIN), 'missing net income must not become a zero margin bar');
+  assert.match(FIN, /Number\.isFinite\(h\.netIncome\) \? h\.netIncome \/ h\.revenue : null/);
+  const TRADE = fs.readFileSync(path.join(ROOT, 'src', 'frontend', 'components', 'trading.js'), 'utf8');
+  assert.ok(!/Number\(v \|\| 0\)/.test(TRADE), 'missing money must not become $0.00');
+  assert.match(TRADE, /!Number\.isFinite\(n\)\) return '—'/);
+});
