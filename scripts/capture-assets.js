@@ -5,9 +5,14 @@
  * capture-assets.js — generates the repository's README imagery with Puppeteer.
  *
  * Requires the terminal to be running (npm start) and reachable at BASE_URL.
+ * Run it against the quota-free demo mode (no provider keys) so the imagery
+ * reflects the current UI with honest SIMULATED/demo provenance.
+ *
  * Outputs:
  *   assets/hero-dashboard.png   1920x1080 full-view capture of the terminal
- *   assets/panel-preview.png    focused capture of the ticker table card
+ *   assets/panel-preview.png    focused capture of the Financials panel
+ *                               (Income Statement view: six tabs + the
+ *                               QUARTERLY | ANNUAL control visible)
  */
 
 const puppeteer = require('puppeteer');
@@ -39,13 +44,27 @@ async function main() {
     await page.screenshot({ path: heroPath });
     console.log(`captured assets/hero-dashboard.png`);
 
-    const panel = await page.$('#p-tick');
+    // Financials panel: capture at a narrower viewport so the full-width card
+    // (and its six tabs / QUARTERLY | ANNUAL control) stays legible when the
+    // README scales the image down. Then switch to the Income Statement view.
+    await page.setViewport({ width: 900, height: 1080, deviceScaleFactor: 1 });
+    await new Promise(r => setTimeout(r, 400));   // reflow at the new width
+    const incomeTab = await page.$('#fin-tabs [data-tab="is"]');
+    if (incomeTab) await incomeTab.click();
+    await page.waitForSelector('#fin-body [data-inc="q"]', { timeout: 10000 }).catch(() => {});
+    await page.waitForFunction(
+      () => /TOTAL REVENUE/.test((document.getElementById('fin-body') || {}).textContent || ''),
+      { timeout: 10000 },
+    ).catch(() => {});
+    await new Promise(r => setTimeout(r, 500));   // settle the tab render
+
+    const panel = await page.$('#p-fin');
     if (panel) {
       const panelPath = path.join(OUT_DIR, 'panel-preview.png');
       await panel.screenshot({ path: panelPath });
       console.log(`captured assets/panel-preview.png`);
     } else {
-      console.warn('ticker table card not found — panel preview skipped');
+      console.warn('financials card not found — panel preview skipped');
     }
 
     for (const f of ['hero-dashboard.png', 'panel-preview.png']) {

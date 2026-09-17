@@ -12,7 +12,7 @@ A Bloomberg-style monitoring terminal for **pure-play EV OEMs and battery manufa
 
 ---
 
-![Global ticker table panel](assets/panel-preview.png)
+![Financials panel — six views with the quarterly/annual income toggle](assets/panel-preview.png)
 
 ## Features
 
