@@ -27,7 +27,9 @@ let submitting = false;
 let pendingIntent = null;          // { sig, id } — reused when a failed request is retried
 
 function fmtMoney(v) {
-  return '$' + Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const n = Number(v);
+  if (v === null || v === undefined || v === '' || !Number.isFinite(n)) return '—';   // missing ≠ $0.00
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function flash(message) {
