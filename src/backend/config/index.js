@@ -34,7 +34,20 @@ const FORCE_SIMULATED = DISTRIBUTION_MODE === 'public';
 const PROVIDER_MODE = FORCE_SIMULATED ? 'demo' : POLYGON_KEY ? 'polygon' : FMP_KEY ? 'fmp' : 'demo';
 
 const HISTORY_TTL_MS = 10 * 60 * 1000;
-const FINANCIALS_TTL_MS = 30 * 60 * 1000;
+/** Fundamentals change quarterly; a 12 h lazy cache keeps the FMP free-tier
+ *  request budget safe (~7 requests/symbol, no background polling). */
+const FINANCIALS_TTL_MS = 12 * 60 * 60 * 1000;
+/** FMP free-tier quotes are end-of-day and there is no batch-quote
+ *  entitlement, so per-symbol quotes are cached for an hour. */
+const FMP_QUOTE_TTL_MS = 60 * 60 * 1000;
+/** Daily EOD bars change once per session — cache them for six hours so page
+ *  reloads do not consume the shared 250-requests/day budget. */
+const FMP_HISTORY_TTL_MS = 6 * 60 * 60 * 1000;
+/** Plan restrictions (402 / entitlement-403) are remembered per endpoint+
+ *  symbol for a conservative hour so a known-restricted capability is not
+ *  retried on every poll; a changed/upgraded account recovers without a
+ *  server restart. */
+const FMP_RESTRICTION_TTL_MS = 60 * 60 * 1000;
 
 /** Origins allowed to call the API / open the WebSocket feed (CORS allowlist). */
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
@@ -98,6 +111,9 @@ module.exports = {
   USE_MOCK_DATA,
   HISTORY_TTL_MS,
   FINANCIALS_TTL_MS,
+  FMP_QUOTE_TTL_MS,
+  FMP_HISTORY_TTL_MS,
+  FMP_RESTRICTION_TTL_MS,
   ALLOWED_ORIGINS,
   API_RATE_LIMIT,
   WS_MAX_SYMBOLS_PER_CLIENT,

@@ -12,20 +12,26 @@ export const SECTORS = {
   BATT: { label: 'BATTERY & TECH', color: '#58A6FF' },
 };
 
+/**
+ * Tracked symbol registry. Prices are intentionally null until a genuine
+ * provider/simulated tick, history finalize or quote arrives — no seeded
+ * constants that could be mistaken for current market data. Custom trackers
+ * added by the user carry their own entered price/pct via `addTrackerRecord`.
+ */
 export const DEFAULT_UNIVERSE = [
-  { sym: 'TSLA', name: 'Tesla Inc', sector: 'PURE', last: 245.10, pct: 1.84, vol: 88.4 },
-  { sym: 'RIVN', name: 'Rivian Automotive', sector: 'PURE', last: 14.87, pct: -2.31, vol: 28.9 },
-  { sym: 'LCID', name: 'Lucid Group', sector: 'PURE', last: 2.41, pct: -3.05, vol: 41.2 },
-  { sym: 'NIO', name: 'NIO Inc ADR', sector: 'PURE', last: 5.12, pct: 2.72, vol: 33.6 },
-  { sym: 'XPEV', name: 'XPeng Inc ADR', sector: 'PURE', last: 21.36, pct: 3.41, vol: 19.8 },
-  { sym: 'LI', name: 'Li Auto Inc ADR', sector: 'PURE', last: 29.84, pct: 1.22, vol: 12.4 },
-  { sym: 'PSNY', name: 'Polestar Automotive', sector: 'PURE', last: 1.18, pct: -1.69, vol: 3.1 },
-  { sym: 'BYDDY', name: 'BYD Co ADR (1211.HK)', sector: 'PURE', last: 58.64, pct: 1.46, vol: 4.2 },
-  { sym: '300750.SZ', name: 'CATL Energy (Contemporary Amperex)', sector: 'BATT', last: 262.40, pct: 2.11, vol: 6.8 },
-  { sym: '3931.HK', name: 'CALB Group (China Amperex)', sector: 'BATT', last: 41.86, pct: 1.37, vol: 3.3 },
-  { sym: 'PCRFY', name: 'Panasonic Energy ADR', sector: 'BATT', last: 11.27, pct: 0.94, vol: 0.8 },
-  { sym: '373220.KS', name: 'LG Energy Solution', sector: 'BATT', last: 214.60, pct: -0.82, vol: 1.5 },
-  { sym: 'ALB', name: 'Albemarle (lithium)', sector: 'BATT', last: 86.43, pct: 2.15, vol: 3.4 },
+  { sym: 'TSLA', name: 'Tesla Inc', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'RIVN', name: 'Rivian Automotive', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'LCID', name: 'Lucid Group', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'NIO', name: 'NIO Inc ADR', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'XPEV', name: 'XPeng Inc ADR', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'LI', name: 'Li Auto Inc ADR', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'PSNY', name: 'Polestar Automotive', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: 'BYDDY', name: 'BYD Co ADR (1211.HK)', sector: 'PURE', last: null, pct: null, vol: null },
+  { sym: '300750.SZ', name: 'CATL Energy (Contemporary Amperex)', sector: 'BATT', last: null, pct: null, vol: null },
+  { sym: '3931.HK', name: 'CALB Group (China Amperex)', sector: 'BATT', last: null, pct: null, vol: null },
+  { sym: 'PCRFY', name: 'Panasonic Energy ADR', sector: 'BATT', last: null, pct: null, vol: null },
+  { sym: '373220.KS', name: 'LG Energy Solution', sector: 'BATT', last: null, pct: null, vol: null },
+  { sym: 'ALB', name: 'Albemarle (lithium)', sector: 'BATT', last: null, pct: null, vol: null },
 ];
 
 /* ---------------- event bus ---------------- */
@@ -61,9 +67,14 @@ function validTrackerSeed(a) {
 export function initTracker(t) {
   t.hist = null;
   t.loading = false;
-  t.chg = t.chg !== undefined ? t.chg : t.last * t.pct / (100 + t.pct);
-  t.vol = t.vol !== undefined ? t.vol : 5.0;
-  t.r52 = t.r52 || [t.last * 0.6, t.last * 1.4];
+  const priced = Number.isFinite(t.last) && t.last > 0;
+  if (!priced) t.last = null;
+  if (!Number.isFinite(t.pct)) t.pct = null;
+  t.chg = Number.isFinite(t.chg)
+    ? t.chg
+    : (priced && Number.isFinite(t.pct) ? t.last * t.pct / (100 + t.pct) : null);
+  if (!Number.isFinite(t.vol)) t.vol = null;
+  t.r52 = t.r52 || (priced ? [t.last * 0.6, t.last * 1.4] : null);
 }
 
 export function finalizeFromHistory(t) {

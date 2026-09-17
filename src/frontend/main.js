@@ -142,6 +142,7 @@ function setFocus(sym) {
   chartState.cross = 59;
   chartState.pinned = null;
   tickerTable.highlightRow(sym);
+  ensureHistory(getTracker(sym));   // lazy per-symbol history (no-op once loaded/in flight)
   focusChart.renderChart();
   financials.renderFinancials(sym);
 }
@@ -164,7 +165,10 @@ function rerenderAll() {
   heatmap.renderHeatmap();
   sector.renderSector();
   trackers.renderTrackerPop();
-  universe.forEach((t, i) => setTimeout(() => ensureHistory(t), i * 100));
+  // History stays lazy: only the focused symbol is ensured; other symbols load
+  // when selected (the chart self-heals while its history is in flight).
+  const focused = getTracker(chartState.focus);
+  if (focused) ensureHistory(focused);
   wsSubscribe(universe.map(t => t.sym));
   if (!getTracker(chartState.focus)) chartState.focus = universe[0] ? universe[0].sym : 'TSLA';
   setFocus(chartState.focus);

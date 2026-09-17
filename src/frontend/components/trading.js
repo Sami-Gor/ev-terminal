@@ -15,7 +15,7 @@
  */
 import { API_BASE } from '../services/api.js';
 import { getTracker, connection, bus } from '../services/store.js';
-import { $, fnum } from '../utils/format.js';
+import { $, fnum, fnumOr } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
 
 const lastPrices = new Map();
@@ -172,13 +172,14 @@ export function updateRowsPnl(syms) {
     const t = getTracker(sym);
     if (!t) return;
     lastPrices.set(sym, t.last);
+    if (!Number.isFinite(t.last)) return;
     document.querySelectorAll(`#qt-positions tr[data-sym="${sym}"]`).forEach(tr => {
       const qty = Number(tr.dataset.qty);
       if (!qty) return;
       const sideDir = tr.dataset.side === 'short' ? -1 : 1;
       const avg = Number(tr.dataset.avg);
       const pl = (t.last - avg) * qty * sideDir;
-      tr.children[3].textContent = fnum(t.last);
+      tr.children[3].textContent = fnumOr(t.last);
       const plCell = tr.children[4];
       plCell.textContent = fmtMoney(pl);
       plCell.className = pl >= 0 ? 'up' : 'down';

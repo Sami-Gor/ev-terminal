@@ -11,6 +11,14 @@ export const fchg = (n, d = 2) => (n >= 0 ? '+' : '−') + fnum(Math.abs(n), d);
 export const fpct = p => (p >= 0 ? '+' : '−') + fnum(Math.abs(p), 2) + '%';
 export const fvol = v => (v >= 1000 ? fnum(v / 1000, 2) + 'B' : fnum(v, 1) + 'M');
 
+/* Null-safe variants: market values stay `—`/neutral until genuine provider
+ * data arrives, so unavailable rows can never look like priced data. */
+export const fnumOr = (n, d = 2, fb = '—') => (Number.isFinite(n) ? fnum(n, d) : fb);
+export const fchgOr = n => (Number.isFinite(n) ? fchg(n) : '—');
+export const fpctOr = p => (Number.isFinite(p) ? fpct(p) : '—');
+export const arrowOr = p => (Number.isFinite(p) ? ARROW(p) : '');
+export const clsOr = p => (Number.isFinite(p) ? CLS(p) : 'flat');
+
 export function fmtBig(v) {
   if (v == null || !isFinite(v)) return '—';
   const a = Math.abs(v), s = v < 0 ? '−' : '';

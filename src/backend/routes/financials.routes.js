@@ -6,6 +6,16 @@ const { okSymbol, createError } = require('../services/symbol-utils');
 
 const router = express.Router();
 
+router.get('/:symbol/growth', async (req, res, next) => {
+  const sym = String(req.params.symbol || '').toUpperCase();
+  if (!okSymbol(sym)) return next(createError(400, 'Invalid symbol'));
+  try {
+    res.json(await marketData.getGrowth(sym));
+  } catch (e) {
+    next(createError(502, 'Upstream Data Unavailable', `growth ${sym}: ${e.message}`));
+  }
+});
+
 router.get('/:symbol', async (req, res, next) => {
   const sym = String(req.params.symbol || '').toUpperCase();
   if (!okSymbol(sym)) return next(createError(400, 'Invalid symbol'));

@@ -21,7 +21,7 @@
 .risk-bar #rk-out b.down{color:var(--red)}
 
 /* shared tab buttons (chart / financials) */
-.fin-tabs{display:flex;gap:4px;margin-left:8px}
+.fin-tabs{display:flex;gap:4px;margin-left:8px;flex-wrap:wrap;min-width:0}
 .ftab{background:none;border:1px solid var(--line);color:var(--dim);font-family:inherit;font-size:9.5px;padding:2px 8px;cursor:pointer;letter-spacing:.5px}
 .ftab:hover{color:var(--amber)}
 .ftab.on{border-color:var(--amber-dim);color:var(--amber)}
@@ -42,6 +42,8 @@ table.fin tbody tr:hover{background:#131417}
 .bar-m i{position:absolute;left:0;top:0;bottom:0;background:var(--green)}
 .bar-m i.neg{background:var(--red)}
 .fin-hint{color:var(--dim);font-size:11px;padding:14px 4px}
+#fin-body{overflow-x:auto}
+.fin-toggle{display:flex;gap:4px;margin-bottom:8px}
 
 /* trade journal */
 .jnl-metrics{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr)) 200px;gap:8px;margin-bottom:10px}

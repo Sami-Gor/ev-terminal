@@ -21,7 +21,8 @@ const NEWS = [
 const TAG_COLORS = { EV: '#00C176', BATT: '#58A6FF' };
 
 function chipPct(sym) {
-  return BYSYM[sym] ? ARROW(BYSYM[sym].pct) + ' ' + fpct(BYSYM[sym].pct) : '';
+  const t = BYSYM[sym];
+  return t && Number.isFinite(t.pct) ? ARROW(t.pct) + ' ' + fpct(t.pct) : '';
 }
 
 export function initNews() {

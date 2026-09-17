@@ -16,16 +16,30 @@ const { generateMockTelemetry } = require('./mock-telemetry');
 
 let pollingTimer = null;
 let pollInFlight = false;
+let lastLoggedError = null;
 
 function quotePriceOf(q) {
   return Number.isFinite(q.price) && q.price > 0 ? q.price : 0;
 }
 
 /** Fetches live quotes via the configured provider; returns null on failure.
- *  Vehicle telemetry has no external source — the last known values are retained. */
+ *  Freshly fetched symbols are published to the cache as they complete
+ *  (`onQuote`) so a paced free-tier board fills progressively; the full-cycle
+ *  snapshot at the end remains authoritative. Vehicle telemetry has no
+ *  external source — the last known values are retained. */
 async function fetchExternalTelemetry(syms, getQuotes) {
+  const partial = (symbol, q) => {
+    cache.applyQuoteBatch([{
+      symbol,
+      name: q.name || symbol,
+      price: quotePriceOf(q),
+      change: Number.isFinite(q.change) ? q.change : 0,
+      percentChange: Number.isFinite(q.percentChange) ? q.percentChange : 0,
+      volume: Number.isFinite(q.volume) ? q.volume : 0,
+    }]);
+  };
   try {
-    const quotes = await getQuotes(syms);
+    const quotes = await getQuotes(syms, { onQuote: partial });
     const tickers = [...quotes.entries()].map(([symbol, q]) => ({
       symbol,
       name: q.name || symbol,
@@ -34,10 +48,15 @@ async function fetchExternalTelemetry(syms, getQuotes) {
       percentChange: Number.isFinite(q.percentChange) ? q.percentChange : 0,
       volume: Number.isFinite(q.volume) ? q.volume : 0,
     }));
+    lastLoggedError = null;
     return { tickers, vehicles: cache.marketCache.vehicles };
   } catch (e) {
     cache.marketCache.meta.lastError = e.message;         // rate limit, timeout, 5xx…
-    console.error(`[market-poller] external fetch failed: ${e.message}`);
+    // Coalesce repeated identical failures (e.g. a sustained 429) to one line.
+    if (e.message !== lastLoggedError) {
+      lastLoggedError = e.message;
+      console.error(`[market-poller] external fetch failed: ${e.message}`);
+    }
     return null;                                          // caller keeps serving the last good cache
   }
 }

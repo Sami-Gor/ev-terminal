@@ -4,7 +4,7 @@
  */
 import { universe, SECTORS, getTracker, connection, stateLabel } from '../services/store.js';
 import { bus } from '../services/store.js';
-import { $, fnum, fchg, fpct, ARROW, CLS } from '../utils/format.js';
+import { $, fnumOr, fchgOr, fpctOr, arrowOr, clsOr } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
 
 export function renderTickerTable() {
@@ -13,8 +13,8 @@ export function renderTickerTable() {
   for (const key of Object.keys(SECTORS)) {
     h += `<tr class="cat"><td colspan="7">${SECTORS[key].label} · n=${universe.filter(t => t.sector === key).length}</td></tr>`;
     universe.filter(t => t.sector === key).forEach(t => {
-      h += `<tr data-sym="${esc(t.sym)}" class="urow" tabindex="0" aria-label="${esc(t.sym)}, ${esc(t.name)}, last ${fnum(t.last)}, ${fpct(t.pct)}. Press Enter to open chart" role="button"><td><b>${esc(t.sym)}</b></td><td>${esc(t.name)}</td><td>${fnum(t.last)}</td>` +
-        `<td class="${CLS(t.pct)}">${ARROW(t.pct)} ${fchg(t.chg)}</td><td class="${CLS(t.pct)}">${fpct(t.pct)}</td>` +
+      h += `<tr data-sym="${esc(t.sym)}" class="urow" tabindex="0" aria-label="${esc(t.sym)}, ${esc(t.name)}, last ${fnumOr(t.last)}, ${fpctOr(t.pct)}. Press Enter to open chart" role="button"><td><b>${esc(t.sym)}</b></td><td>${esc(t.name)}</td><td>${fnumOr(t.last)}</td>` +
+        `<td class="${clsOr(t.pct)}">${arrowOr(t.pct)} ${fchgOr(t.chg)}</td><td class="${clsOr(t.pct)}">${fpctOr(t.pct)}</td>` +
         `<td><span class="stateb ${connection.live ? 'open' : ''}">${stateLabel()}</span></td>` +
         `<td class="src">${connection.dataSrc}</td>` +
         `<td class="rm" data-rm="${esc(t.sym)}" title="remove ${esc(t.sym)} from trackers">✕</td></tr>`;
@@ -60,11 +60,28 @@ export function updateRows(syms) {
     if (!t) return;
     document.querySelectorAll(`#tk-table tr.urow[data-sym="${sym}"]`).forEach(tr => {
       const td = tr.children;
-      td[2].textContent = fnum(t.last);
-      td[3].className = CLS(t.pct);
-      td[3].textContent = ARROW(t.pct) + ' ' + fchg(t.chg);
-      td[4].className = CLS(t.pct);
-      td[4].textContent = fpct(t.pct);
+      td[2].textContent = fnumOr(t.last);
+      td[3].className = clsOr(t.pct);
+      td[3].textContent = arrowOr(t.pct) + ' ' + fchgOr(t.chg);
+      td[4].className = clsOr(t.pct);
+      td[4].textContent = fpctOr(t.pct);
     });
   });
 }
+
+/** Rows render once at boot, before the async config fetch resolves — keep the
+ *  per-row state/source labels in sync whenever the connection mode changes so
+ *  they never contradict the header badge. */
+export function refreshStateCells() {
+  document.querySelectorAll('#tk-table tbody tr.urow').forEach(tr => {
+    const st = tr.querySelector('.stateb');
+    if (st) {
+      st.textContent = stateLabel();
+      st.className = 'stateb' + (connection.live ? ' open' : '');
+    }
+    const src = tr.querySelector('td.src');
+    if (src) src.textContent = connection.dataSrc;
+  });
+}
+
+bus.on('connection', refreshStateCells);

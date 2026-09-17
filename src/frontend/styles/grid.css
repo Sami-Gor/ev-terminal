@@ -1,5 +1,5 @@
 /* grid.css — card grid, panel chrome, header popovers, drag & drop */
-main.grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}
+main.grid{display:grid;gap:10px;grid-template-columns:repeat(12,minmax(0,1fr))}
 #grid-empty{display:none;border:1px dashed var(--line);color:var(--dim);padding:40px 20px;text-align:center;margin-top:10px}
 #grid-empty b{color:var(--amber)}
 .panel.dragging{opacity:.35}
@@ -13,7 +13,7 @@ main.grid{display:grid;gap:10px;grid-template-columns:repeat(12,1fr)}
 .ptitle{color:var(--amber);font-size:11.5px;font-weight:700;letter-spacing:.8px}
 .pmeta{margin-left:auto;color:var(--dim);font-size:10px}
 .pmeta b{color:var(--dim);border:1px solid var(--line);padding:0 4px;font-weight:400}
-.pb{padding:8px 10px;flex:1;min-height:0;position:relative}
+.pb{padding:8px 10px;flex:1;min-height:0;position:relative;overflow-x:auto}  /* wide tables scroll locally, never the page */
 .note{color:var(--dim);font-size:10px;padding:6px 10px;border-top:1px solid var(--line2)}
 .note b{color:var(--dim)}
 .ph-tools{display:flex;gap:3px;margin-left:8px}
