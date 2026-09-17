@@ -41,12 +41,16 @@ export const DATES = (() => {
   return ds.reverse();
 })();
 
-/** Offline fallback candle history anchored to the tracker's last/pct. */
+/** Offline fallback candle history anchored to the tracker's last/pct when
+ *  known. With no provider price yet, a neutral deterministic base keeps the
+ *  offline fallback functional without presenting a realistic quote. */
 export function genHist(t) {
   const r = rngFor(t.sym + '|h');
+  const base = Number.isFinite(t.last) && t.last > 0 ? t.last : 100;
+  const anchorPct = Number.isFinite(t.pct) ? t.pct : 0;
   const closes = new Array(SESSION_COUNT);
-  closes[SESSION_COUNT - 1] = t.last;
-  const prev = t.last / (1 + t.pct / 100);
+  closes[SESSION_COUNT - 1] = base;
+  const prev = base / (1 + anchorPct / 100);
   closes[SESSION_COUNT - 2] = prev;
   const sigma = 1.4 + (hash(t.sym) % 160) / 100;
   for (let i = SESSION_COUNT - 3; i >= 0; i--) {

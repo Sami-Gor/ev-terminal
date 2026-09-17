@@ -30,21 +30,31 @@ function returnsFor(sym) {
   return closes && closes.length > 10 ? returnsN(closes, 30) : null;
 }
 
-function fetchMissing() {
-  [...EV_SYMBOLS, ...COMMODITIES.map(c => c.sym)].forEach(sym => {
-    if (getTracker(sym) && getTracker(sym).hist && getTracker(sym).hist.length) return;
-    const cached = seriesCache[sym];
-    if (cached && Date.now() - cached.ts < CACHE_TTL_MS) return;
-    fetchJson(`${API_BASE}/api/history/${encodeURIComponent(sym)}`)
-      .then(data => {
+let fetchInFlight = false;
+
+/** Fills missing series sequentially through the background-priority lane —
+ *  one request at a time, so parked low-priority prefetches never occupy the
+ *  browser connection slots needed by interactive history. */
+async function fetchMissing() {
+  if (fetchInFlight) return;
+  fetchInFlight = true;
+  try {
+    for (const sym of [...EV_SYMBOLS, ...COMMODITIES.map(c => c.sym)]) {
+      const t = getTracker(sym);
+      if (t && t.hist && t.hist.length) continue;
+      const cached = seriesCache[sym];
+      if (cached && Date.now() - cached.ts < CACHE_TTL_MS) continue;
+      try {
+        const data = await fetchJson(`${API_BASE}/api/history/${encodeURIComponent(sym)}?priority=low`);
         seriesCache[sym] = { ts: Date.now(), closes: (data.bars || []).map(b => b.c) };
-        render();
-      })
-      .catch(err => {
+      } catch (err) {
         seriesCache[sym] = { ts: Date.now(), closes: [], failed: String(err.message || 'fetch failed') };
-        render();
-      });
-  });
+      }
+      render();
+    }
+  } finally {
+    fetchInFlight = false;
+  }
 }
 
 export function render() {

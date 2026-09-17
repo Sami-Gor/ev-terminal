@@ -218,6 +218,133 @@ test('scheduler priority: interactive requests overtake queued background work',
 });
 
 /* ------------------------------------------------------------------ *
+ * Free-tier activation, shared backpressure and request dedupe        *
+ * ------------------------------------------------------------------ */
+
+const rangeResult = () => ({ data: { results: [LATEST_BAR, PRIOR_BAR] } });
+
+function freeTierTransport(counters = {}) {
+  return async url => {
+    if (url.includes('/v2/snapshot/')) {
+      counters.snapshots = (counters.snapshots || 0) + 1;
+      throw snapshot403();
+    }
+    counters.ranges = (counters.ranges || 0) + 1;
+    return rangeResult();
+  };
+}
+
+test('snapshot 403 proactively paces the session; snapshot success leaves it unthrottled', async () => {
+  polygon.resetQuoteState();
+  assert.equal(polygon.getSessionPacing(), 0);
+  const paid = async () => ({ data: { tickers: [SNAPSHOT_TICKER] } });
+  await polygon.polyQuotes(['TSLA'], { httpGet: paid });
+  assert.equal(polygon.getSessionPacing(), 0, 'paid/realtime session must stay unthrottled');
+
+  polygon.resetQuoteState();
+  assert.equal(polygon.getSessionPacing(), 0);
+  await polygon.polyQuotes(['TSLA'], { httpGet: freeTierTransport() });
+  assert.ok(polygon.getSessionPacing() > 0, 'EOD free-tier mode paces before the first 429');
+  polygon.resetQuoteState();
+  assert.equal(polygon.getSessionPacing(), 0);
+});
+
+test('invalid key (401) surfaces and never activates free-tier pacing', async () => {
+  polygon.resetQuoteState();
+  const unauthorized = async () => {
+    const e = new Error('Unauthorized');
+    e.response = { status: 401, data: { error: 'Invalid API key' } };
+    throw e;
+  };
+  await assert.rejects(() => polygon.polyQuotes(['TSLA'], { httpGet: unauthorized }), /Unauthorized/);
+  assert.equal(polygon.getSessionPacing(), 0, '401 must not be mistaken for free-tier mode');
+});
+
+test('history 403 (non-snapshot) stays a plain error and never activates free-tier mode', async () => {
+  polygon.resetQuoteState();
+  const forbidden = async () => {
+    const e = new Error('Forbidden');
+    e.response = { status: 403, data: { error: 'FORBIDDEN' } };
+    throw e;
+  };
+  await assert.rejects(() => polygon.polyHistory('TSLA', forbidden), /Forbidden/);
+  assert.equal(polygon.getSessionPacing(), 0);
+});
+
+test('concurrent callers share one snapshot entitlement probe', async () => {
+  polygon.resetQuoteState();
+  const counters = {};
+  const httpGet = freeTierTransport(counters);
+  const wrapped = async (url, opts) => {
+    if (url.includes('/v2/snapshot/')) { await sleep(10); }
+    return httpGet(url, opts);
+  };
+  const [a, b] = await Promise.all([
+    polygon.polyQuotes(['TSLA'], { httpGet: wrapped }),
+    polygon.polyQuotes(['RIVN'], { httpGet: wrapped }),
+  ]);
+  assert.equal(counters.snapshots, 1, 'exactly one snapshot probe for the session');
+  assert.equal(a.get('TSLA').dataMode, 'eod');
+  assert.equal(b.get('RIVN').dataMode, 'eod');
+  assert.equal(counters.ranges, 2, 'each symbol still gets its own EOD range request');
+  polygon.resetQuoteState();
+});
+
+test('same-symbol EOD requests from overlapping consumers are deduplicated', async () => {
+  polygon.resetQuoteState();
+  const counters = {};
+  const httpGet = freeTierTransport(counters);
+  await polygon.polyQuotes(['MSFT'], { httpGet });      // enters EOD mode, caches MSFT
+  counters.ranges = 0;
+  const [a, b] = await Promise.all([
+    polygon.polyQuotes(['TSLA'], { httpGet }),
+    polygon.polyQuotes(['TSLA'], { httpGet }),
+  ]);
+  assert.equal(counters.ranges, 1, 'concurrent same-symbol fetch shares one provider call');
+  assert.equal(a.get('TSLA'), b.get('TSLA'));
+  polygon.resetQuoteState();
+});
+
+test('EOD population reports each freshly fetched symbol once (progressive board)', async () => {
+  polygon.resetQuoteState();
+  const seen = [];
+  const httpGet = freeTierTransport();
+  await polygon.polyQuotes(['TSLA', 'RIVN'], { httpGet, onQuote: (s, q) => seen.push([s, q && q.dataMode]) });
+  assert.deepEqual(seen, [['TSLA', 'eod'], ['RIVN', 'eod']], 'one callback per fetched symbol, in order');
+  await polygon.polyQuotes(['TSLA', 'RIVN'], { httpGet, onQuote: (s) => seen.push([s]) });
+  assert.equal(seen.length, 2, 'cache hits are not re-published');
+  polygon.resetQuoteState();
+});
+
+test('backpressure is shared: quote and history work consume one pacing budget', async () => {
+  const scheduler = polygon.createScheduler(25);
+  assert.equal(scheduler.enablePacing(), true, 'free-tier activation enables pacing without a 429');
+  assert.equal(scheduler.enablePacing(), false, 're-activation is idempotent');
+  assert.equal(scheduler.pacing, 25);
+  const times = [];
+  const run = (label, prio) => scheduler.run(async () => { times.push({ label, t: Date.now() }); }, prio);
+  await run('quote-low', 'low');
+  await run('history-high', 'high');
+  await run('quote-low-2', 'low');
+  assert.ok(times[1].t - times[0].t >= 20, 'history shares the quote pacing budget');
+  assert.ok(times[2].t - times[1].t >= 20, 'pacing persists for subsequent quote work');
+});
+
+test('background work is not starved and a 429 enables pacing exactly once', async () => {
+  const scheduler = polygon.createScheduler(5);
+  const order = [];
+  const jobs = [1, 2, 3].map(n => scheduler.run(async () => { order.push('low' + n); }, 'low'));
+  const high = scheduler.run(async () => { order.push('high'); }, 'high');
+  await Promise.all([...jobs, high]);
+  assert.equal(order[0], 'low1', 'the in-flight low job was not cancelled');
+  assert.equal(order[1], 'high', 'queued interactive work overtakes queued background work');
+  assert.deepEqual([...order].sort(), ['high', 'low1', 'low2', 'low3'], 'no background starvation');
+  assert.equal(scheduler.noteRateLimit(), true, 'first 429 enables pacing');
+  assert.equal(scheduler.noteRateLimit(), false, 'later 429s only keep pacing (no re-log/retry storm)');
+  assert.equal(scheduler.pacing > 0, true);
+});
+
+/* ------------------------------------------------------------------ *
  * WebSocket reconnect policy (fake socket — no network)               *
  * ------------------------------------------------------------------ */
 

@@ -30,6 +30,7 @@ function setBadgeState() {
   }
   document.querySelectorAll('.ph .pmeta b').forEach(el => {
     if (!PANEL_STATES.has(el.textContent)) return;
+    if (el.closest('#fin-meta')) return;   // financials panel owns its FMP/MODELED provenance label
     el.textContent = live ? stateLabel() : 'DEMO';
   });
   // Keep in-place state columns in sync when the mode changes (e.g. realtime → EOD);

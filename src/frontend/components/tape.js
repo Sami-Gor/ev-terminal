@@ -3,17 +3,16 @@
  */
 import { universe, BYSYM, getTracker, stateLabel } from '../services/store.js';
 import { bus } from '../services/store.js';
-import { $, fnum, fpct, ARROW, CLS } from '../utils/format.js';
+import { $, fnumOr, fpctOr, arrowOr, clsOr, ARROW, fpct } from '../utils/format.js';
 import { esc } from '../utils/sanitize.js';
 
 export function renderTape() {
   const seq = [...universe];
   const item = x => {
-    const p = x.pct;
-    const ch = x.chg !== undefined ? x.chg : x.last * p / (100 + p);
+    const p = Number.isFinite(x.pct) ? x.pct : null;
     return `<span class="ti" ${BYSYM[x.sym] ? 'data-sym="' + esc(x.sym) + '"' : ''}><b>${esc(x.sym)}</b>` +
-      `<span class="px">${fnum(x.last, x.dec ?? 2)}</span>` +
-      `<span class="${CLS(p)}">${ARROW(p)} ${fpct(p)}</span>` +
+      `<span class="px">${fnumOr(x.last, x.dec ?? 2)}</span>` +
+      `<span class="${clsOr(p)}">${arrowOr(p)} ${fpctOr(p)}</span>` +
       `<em>${x.state || stateLabel()}</em></span>`;
   };
   const one = seq.map(item).join('');
@@ -34,8 +33,8 @@ export function updateSymbols(syms) {
       const px = el.querySelector('.px');
       const pc = el.querySelector('span.up,span.down,span.flat');
       const em = el.querySelector('em');
-      if (px) px.textContent = fnum(t.last);
-      if (pc) { pc.className = CLS(t.pct); pc.textContent = ARROW(t.pct) + ' ' + fpct(t.pct); }
+      if (px) px.textContent = fnumOr(t.last);
+      if (pc) { pc.className = clsOr(t.pct); pc.textContent = Number.isFinite(t.pct) ? ARROW(t.pct) + ' ' + fpct(t.pct) : '—'; }
       if (em) em.textContent = stateLabel();
     });
   });

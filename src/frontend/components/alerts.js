@@ -3,7 +3,7 @@
  * evaluation, self-dismissing toasts, audio chime, persisted history tray.
  */
 import { getTracker, chartState } from '../services/store.js';
-import { $, fnum, fpct } from '../utils/format.js';
+import { $, fnum, fpct, fnumOr, fpctOr } from '../utils/format.js';
 import { esc, isValidSymbol } from '../utils/sanitize.js';
 
 const ALERTS_KEY = 'evt-alerts-v1';
@@ -91,7 +91,7 @@ function showToast(items) {
     const card = document.createElement('div');
     card.className = 'toast';
     card.innerHTML = `<b>◉ ALERT — ${esc(alert.sym)}</b> ${conditionText(alert.cond, alert.value)}` +
-      (t ? `<br>now <b>${fnum(t.last)}</b> (${fpct(t.pct)})` : '') +
+      (t ? `<br>now <b>${fnumOr(t.last)}</b> (${fpctOr(t.pct)})` : '') +
       `<span class="tm">${new Date().toLocaleTimeString('en-US', { hour12: false })}</span>`;
     wrap.appendChild(card);
     setTimeout(() => {

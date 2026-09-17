@@ -91,3 +91,22 @@ test('cache notifies subscribers and live ticks update the board', { skip: !isDe
     stop();
   }
 });
+
+test('applyQuoteBatch merges paced partial quotes without manufacturing values', () => {
+  const before = cache.marketCache.tickers.length;
+  cache.applyQuoteBatch([{ symbol: 'ZZTEST1', name: 'ZZTEST1', price: 12.34, change: 0.5, percentChange: 4.2, volume: 100 }]);
+  let board = cache.marketCache.tickers;
+  assert.equal(board.length, before + 1, 'new symbol appended');
+  const row = board.find(t => t.symbol === 'ZZTEST1');
+  assert.equal(row.price, 12.34);
+  assert.ok(cache.marketCache.updatedAt, 'batch updates the cache timestamp');
+
+  cache.applyQuoteBatch([{ symbol: 'ZZTEST1', name: 'ZZTEST1', price: 13.00, change: 1.16, percentChange: 9.8, volume: 220 }]);
+  board = cache.marketCache.tickers;
+  assert.equal(board.length, before + 1, 'existing symbol updated in place, not duplicated');
+  assert.equal(board.find(t => t.symbol === 'ZZTEST1').price, 13);
+  assert.equal(board.filter(t => t.symbol === 'ZZTEST1').length, 1);
+
+  const untouched = board.find(t => t.symbol === 'TSLA');
+  if (untouched) assert.equal(untouched.price, 999.99, 'symbols outside the batch keep their last known values');
+});

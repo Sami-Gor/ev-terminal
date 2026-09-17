@@ -33,6 +33,12 @@ let fallbackLogged = false;
  *  request volume compatible with free-tier rate limits. */
 const DAILY_TTL_MS = 10 * 60 * 1000;
 const dailyCache = new Map(); // sym → { quote, fetchedAt }
+/** Same-symbol EOD fetches share one provider request (browser quote prefetch
+ *  racing the background poller must not duplicate REST calls). */
+const dailyInflight = new Map(); // sym → in-flight promise
+/** In-flight snapshot entitlement decision shared by concurrent callers, so
+ *  the session performs exactly one snapshot probe. */
+let snapshotProbe = null;
 
 /** 429 = plan rate limit reached (free tier: 5 calls/minute). */
 function isRateLimitError(e) {
@@ -82,6 +88,20 @@ function createScheduler(throttleMs = THROTTLE_MS) {
       pacingMs = throttleMs;
       return true;
     },
+    /** Enables pacing before any 429 — used once the account is known to be
+     *  on the free/EOD compatibility path (snapshot entitlement 403), so the
+     *  first provider burst is paced instead of discovered via rejection.
+     *  Returns true when pacing was newly enabled. */
+    enablePacing() {
+      if (pacingMs > 0) return false;
+      pacingMs = throttleMs;
+      return true;
+    },
+    /** Clears pacing and spacing state (session reset / tests). */
+    resetPacing() {
+      pacingMs = 0;
+      lastAt = 0;
+    },
     get pacing() { return pacingMs; },
     run(task, priority = 'high') {
       return new Promise((resolve, reject) => {
@@ -93,6 +113,11 @@ function createScheduler(throttleMs = THROTTLE_MS) {
 }
 
 const scheduler = createScheduler();
+
+/** Active session scheduler pacing in ms (0 = unthrottled). Exported for tests. */
+function getSessionPacing() {
+  return scheduler.pacing;
+}
 
 /** Default transport: schedules the call and activates pacing on the first 429. */
 async function polygonGet(url, opts, priority = 'high') {
@@ -114,7 +139,10 @@ function getQuoteMode() {
 function resetQuoteState() {
   quoteMode = 'unknown';
   fallbackLogged = false;
+  snapshotProbe = null;
   dailyCache.clear();
+  dailyInflight.clear();
+  scheduler.resetPacing();
 }
 
 /** 403 = the plan is not entitled to the endpoint. 401 (invalid key) must surface. */
@@ -122,11 +150,12 @@ function isEntitlementError(e) {
   return !!(e && e.response && e.response.status === 403);
 }
 
-async function polyHistory(sym, httpGet = polygonGet) {
+async function polyHistory(sym, httpGet, priority = 'high') {
+  const get = httpGet || ((url, opts) => polygonGet(url, opts, priority));
   const to = new Date();
   const from = new Date(Date.now() - 130 * 864e5);
   const fmt = d => d.toISOString().slice(0, 10);
-  const { data } = await httpGet(
+  const { data } = await get(
     `${API_BASE}/v2/aggs/ticker/${encodeURIComponent(sym)}/range/1/day/${fmt(from)}/${fmt(to)}`,
     { params: { adjusted: true, sort: 'desc', limit: 60, apiKey: POLYGON_KEY }, timeout: 12000 },
   );
@@ -138,13 +167,14 @@ async function polyHistory(sym, httpGet = polygonGet) {
   return { bars, provider: 'polygon' };
 }
 
-async function polyHistoryTimeframe(sym, timeframe, httpGet = polygonGet) {
+async function polyHistoryTimeframe(sym, timeframe, httpGet, priority = 'high') {
+  const get = httpGet || ((url, opts) => polygonGet(url, opts, priority));
   const multiplier = timeframe === '4h' ? 4 : 15;
   const span = timeframe === '4h' ? 'hour' : 'minute';
   const days = timeframe === '4h' ? 45 : 5;
   const to = new Date().toISOString().slice(0, 10);
   const from = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
-  const { data } = await httpGet(
+  const { data } = await get(
     `${API_BASE}/v2/aggs/ticker/${encodeURIComponent(sym)}/range/${multiplier}/${span}/${from}/${to}`,
     { params: { adjusted: true, sort: 'desc', limit: 60, apiKey: POLYGON_KEY }, timeout: 12000 },
   );
@@ -257,15 +287,36 @@ function mapDailyBars(sym, results, now = new Date()) {
   };
 }
 
+/** Fetches + caches one EOD quote, deduplicating concurrent requests for the
+ *  same symbol so overlapping consumers share a single provider call. */
+function fetchDailyQuote(sym, httpGet, now) {
+  const inflight = dailyInflight.get(sym);
+  if (inflight) return inflight;
+  const p = (async () => {
+    const to = etYmd(now);
+    const from = etYmd(new Date(now.getTime() - 10 * 864e5));
+    const { data } = await httpGet(
+      `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(sym)}/range/1/day/${from}/${to}`,
+      { params: { adjusted: true, sort: 'desc', limit: 6, apiKey: POLYGON_KEY }, timeout: 10000 },
+    );
+    const quote = mapDailyBars(sym, data && data.results, now);
+    dailyCache.set(sym, { quote, fetchedAt: Date.now() });
+    return quote;
+  })();
+  dailyInflight.set(sym, p);
+  p.finally(() => dailyInflight.delete(sym)).catch(() => {});
+  return p;
+}
+
 /**
  * EOD quotes for a set of symbols: one daily range request per symbol (same
- * request volume as the previous `/prev` fallback), cached and graceful on
- * failure. The window spans 10 calendar days so weekends and holidays always
+ * request volume as the previous `/prev` fallback), cached, deduplicated and
+ * graceful on failure. `onQuote(sym, quote)` fires per freshly fetched symbol
+ * so callers can publish the board progressively under paced free-tier
+ * budgets. The window spans 10 calendar days so weekends and holidays always
  * leave at least two completed sessions.
  */
-async function polyDailyQuotes(syms, httpGet, now = new Date()) {
-  const to = etYmd(now);
-  const from = etYmd(new Date(now.getTime() - 10 * 864e5));
+async function polyDailyQuotes(syms, httpGet, now = new Date(), onQuote) {
   const out = new Map();
   let lastError = null;
   for (const sym of syms) {
@@ -275,13 +326,11 @@ async function polyDailyQuotes(syms, httpGet, now = new Date()) {
       continue;
     }
     try {
-      const { data } = await httpGet(
-        `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(sym)}/range/1/day/${from}/${to}`,
-        { params: { adjusted: true, sort: 'desc', limit: 6, apiKey: POLYGON_KEY }, timeout: 10000 },
-      );
-      const quote = mapDailyBars(sym, data && data.results, now);
-      dailyCache.set(sym, { quote, fetchedAt: Date.now() });
+      const quote = await fetchDailyQuote(sym, httpGet, now);
       out.set(sym, quote);
+      if (onQuote) {
+        try { onQuote(sym, quote); } catch (e) { /* publishing must not break the batch */ }
+      }
     } catch (e) {
       lastError = e;
       if (cached) out.set(sym, cached.quote);   // keep the last known EOD value instead of dropping the symbol
@@ -293,47 +342,81 @@ async function polyDailyQuotes(syms, httpGet, now = new Date()) {
 
 function noteEntitlementFallback() {
   quoteMode = 'eod';
+  // The account is known to be on the free/EOD compatibility path: pace REST
+  // immediately instead of discovering the quota through repeated 429s.
+  scheduler.enablePacing();
   if (!fallbackLogged) {
     fallbackLogged = true;
-    console.warn('[polygon-provider] snapshot quotes not entitled for this plan — using completed daily aggregates (EOD close vs previous close, not realtime)');
+    console.warn('[polygon-provider] snapshot quotes not entitled for this plan — using completed daily aggregates (EOD close vs previous close, not realtime); REST requests paced for the free-tier budget');
   }
+}
+
+/** Raw snapshot quote mapping (no fallback / no mode handling). */
+async function snapshotQuotes(syms, get) {
+  const { data } = await get(
+    'https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers',
+    { params: { tickers: syms.join(','), apiKey: POLYGON_KEY }, timeout: 10000 },
+  );
+  const out = new Map();
+  for (const t of data.tickers || []) {
+    const price = (t.lastTrade && t.lastTrade.p) || (t.min && t.min.p) || (t.day && t.day.c) || (t.prevDay && t.prevDay.c) || 0;
+    const change = Number.isFinite(t.todaysChange) ? t.todaysChange : +(price - (t.prevDay ? t.prevDay.c : price)).toFixed(2);
+    const pct = Number.isFinite(t.todaysChangePerc) ? t.todaysChangePerc : 0;
+    out.set(t.ticker, {
+      price,
+      change,
+      percentChange: pct,
+      volume: (t.day && t.day.v) || 0,
+      dataMode: 'realtime',
+      provider: 'polygon',
+    });
+  }
+  return out;
 }
 
 /**
  * Batch quotes. Tries the realtime snapshot endpoint first; on an entitlement
  * (403) response it permanently switches this session to completed daily
  * aggregates. Other errors propagate unchanged.
- * `priority: 'low'` is used by the background poller so interactive requests
- * keep their place in the free-tier rate-limit queue.
+ *
+ * The entitlement decision is shared: concurrent callers wait on one probe
+ * instead of each hitting the snapshot endpoint. `priority: 'low'` is used by
+ * the background poller so interactive requests keep their place in the
+ * free-tier rate-limit queue.
  */
-async function polyQuotes(syms, { httpGet, priority = 'high' } = {}) {
+async function polyQuotes(syms, { httpGet, priority = 'high', onQuote } = {}) {
   const get = httpGet || ((url, opts) => polygonGet(url, opts, priority));
-  if (quoteMode === 'eod') return polyDailyQuotes(syms, get);   // do not re-probe a known-unentitled endpoint
+  if (quoteMode === 'eod') return polyDailyQuotes(syms, get, new Date(), onQuote);   // do not re-probe a known-unentitled endpoint
+
+  if (quoteMode === 'unknown' && !snapshotProbe) {
+    snapshotProbe = (async () => {
+      try {
+        const out = await snapshotQuotes(syms, get);
+        quoteMode = 'realtime';
+        return { out };
+      } catch (e) {
+        if (!isEntitlementError(e)) return { error: e };
+        noteEntitlementFallback();
+        return { entitlement: true };
+      }
+    })().finally(() => { snapshotProbe = null; });
+  }
+  if (quoteMode === 'unknown') {
+    const decision = await snapshotProbe;
+    if (decision.error) throw decision.error;
+    if (decision.entitlement) return polyDailyQuotes(syms, get, new Date(), onQuote);
+    if (syms.every(s => decision.out.has(s))) return decision.out;
+    // realtime session, different symbol set: make the caller's own snapshot call
+  }
+
   try {
-    const { data } = await get(
-      'https://api.polygon.io/v2/snapshot/locale/us/markets/stocks/tickers',
-      { params: { tickers: syms.join(','), apiKey: POLYGON_KEY }, timeout: 10000 },
-    );
-    const out = new Map();
-    for (const t of data.tickers || []) {
-      const price = (t.lastTrade && t.lastTrade.p) || (t.min && t.min.p) || (t.day && t.day.c) || (t.prevDay && t.prevDay.c) || 0;
-      const change = Number.isFinite(t.todaysChange) ? t.todaysChange : +(price - (t.prevDay ? t.prevDay.c : price)).toFixed(2);
-      const pct = Number.isFinite(t.todaysChangePerc) ? t.todaysChangePerc : 0;
-      out.set(t.ticker, {
-        price,
-        change,
-        percentChange: pct,
-        volume: (t.day && t.day.v) || 0,
-        dataMode: 'realtime',
-        provider: 'polygon',
-      });
-    }
+    const out = await snapshotQuotes(syms, get);
     quoteMode = 'realtime';
     return out;
   } catch (e) {
     if (!isEntitlementError(e)) throw e;   // invalid key / 5xx / malformed still surface
     noteEntitlementFallback();
-    return polyDailyQuotes(syms, get);
+    return polyDailyQuotes(syms, get, new Date(), onQuote);
   }
 }
 
@@ -348,5 +431,6 @@ module.exports = {
   isRateLimitError,
   createScheduler,
   getQuoteMode,
+  getSessionPacing,
   resetQuoteState,
 };

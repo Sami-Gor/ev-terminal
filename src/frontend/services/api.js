@@ -2,7 +2,7 @@
  * api.js — REST service layer. All network calls flow through here;
  * components never call fetch() directly.
  */
-import { bus, setConnection, finalizeFromHistory, chartState } from './store.js';
+import { bus, setConnection, finalizeFromHistory, chartState, getTracker } from './store.js';
 
 import { DATES, genHist } from '../utils/demo-engine.js';
 
@@ -35,12 +35,15 @@ let restFailStreak = 0;
  * Load 60-session daily bars for a tracker (server first, seeded offline
  * fallback second) and finalize the derived fields. Never hangs: failures
  * mark the tracker offline-ready and the connection badge degrades gracefully.
+ * `priority: 'low'` is for background prefetch so it yields to the visible
+ * chart's history in the provider rate-limit queue.
  */
-export async function ensureHistory(t) {
+export async function ensureHistory(t, priority = 'high') {
   if (t.hist || t.loading) return;
   t.loading = true;
   try {
-    const data = await fetchJson(`${API_BASE}/api/history/${encodeURIComponent(t.sym)}`);
+    const suffix = priority === 'low' ? '?priority=low' : '';
+    const data = await fetchJson(`${API_BASE}/api/history/${encodeURIComponent(t.sym)}${suffix}`);
     const bars = (data.bars || []).slice(-60);
     if (bars.length < 10) throw new Error('insufficient bars');
     t.hist = bars.map(b => ({
@@ -66,10 +69,15 @@ export async function ensureHistory(t) {
   if (chartState.focus === t.sym) bus.emit('focus-redraw');
 }
 
-/** Refresh last/change/volume/name from the quote endpoint (best effort). */
-export async function ensureQuote(t) {
+/** Refresh last/change/volume/name from the quote endpoint (best effort).
+ *  Deduplicated per tracker; used for direct/on-demand refreshes only —
+ *  the background board is populated by the market cache feed. */
+export async function ensureQuote(t, priority = 'high') {
+  if (t.quoteLoading) return;
+  t.quoteLoading = true;
   try {
-    const quote = await fetchJson(`${API_BASE}/api/quote/${encodeURIComponent(t.sym)}`);
+    const suffix = priority === 'low' ? '?priority=low' : '';
+    const quote = await fetchJson(`${API_BASE}/api/quote/${encodeURIComponent(t.sym)}${suffix}`);
     setConnection({ restOk: true, provider: quote.provider || connectionProvider() });
     if (quote.price > 0) t.last = quote.price;
     if (Number.isFinite(quote.change)) {
@@ -81,7 +89,7 @@ export async function ensureQuote(t) {
     if (Number.isFinite(quote.volume) && quote.volume > 0) t.vol = quote.volume > 5000 ? quote.volume / 1e6 : quote.volume;
     if (quote.name && quote.name !== t.sym) t.name = quote.name;
     bus.emit('quote-loaded', t.sym);
-  } catch (e) { /* quote is best-effort */ }
+  } catch (e) { /* quote is best-effort */ } finally { t.quoteLoading = false; }
 }
 
 function connectionProvider() {
@@ -111,15 +119,15 @@ export async function fetchAppConfig() {
   }
 }
 
-/** Staggered boot fetch: histories first, then quotes. */
+/** Boot fetch: the visible chart's history only (high priority). The board is
+ *  populated by the provider poller / live stream via the market cache, so no
+ *  per-symbol quote or all-universe history burst is issued here. */
 export function scheduleInitialLoads(universe) {
   fetchAppConfig();
   // The first provider poll can downgrade realtime → EOD moments after boot;
   // refresh shortly after and then periodically to keep labels honest.
   setTimeout(fetchAppConfig, 8000);
   setInterval(fetchAppConfig, 60000);
-  universe.forEach((t, i) => setTimeout(() => ensureHistory(t), i * 150));
-  setTimeout(() => {
-    universe.forEach((t, i) => setTimeout(() => ensureQuote(t), i * 200));
-  }, universe.length * 150 + 1500);
+  const focused = getTracker(chartState.focus);
+  if (focused) ensureHistory(focused);
 }

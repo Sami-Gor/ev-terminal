@@ -160,9 +160,81 @@ function demoFinancials(sym) {
     netIncome: netIncomeTTM / 4 * (0.7 + r() * 0.6),
     rd: rdSpendTTM / 4 * (0.9 + r() * 0.2),
   }));
+  // Modeled quarterly balance sheet — internally consistent (assets =
+  // liabilities + equity) and explicitly part of the modeled payload.
+  const balanceHistory = quarters.map(q => {
+    const cashAndEquivalents = cashSTI * (0.7 + r() * 0.4);
+    const shortTermInvestments = cashSTI * (0.1 + r() * 0.3);
+    const inventory = revenueTTM / 4 * (0.1 + r() * 0.15);
+    const currentAssets = cashAndEquivalents + shortTermInvestments + inventory + revenueTTM / 4 * (0.05 + r() * 0.1);
+    const totalAssets = currentAssets + revenueTTM * (0.4 + r() * 0.6);
+    const currentLiabilities = currentAssets * (0.35 + r() * 0.3);
+    const totalLiabilities = Math.min(totalAssets * 0.85, currentLiabilities + debt * (0.9 + r() * 0.4));
+    return {
+      label: q.label,
+      date: null,
+      fiscalYear: null,
+      period: q.label,
+      cashAndEquivalents: +(cashAndEquivalents.toFixed(2)),
+      shortTermInvestments: +(shortTermInvestments.toFixed(2)),
+      cashAndShortTermInvestments: +((cashAndEquivalents + shortTermInvestments).toFixed(2)),
+      inventory: +(inventory.toFixed(2)),
+      currentAssets: +(currentAssets.toFixed(2)),
+      totalAssets: +(totalAssets.toFixed(2)),
+      currentLiabilities: +(currentLiabilities.toFixed(2)),
+      totalLiabilities: +(totalLiabilities.toFixed(2)),
+      stockholdersEquity: +((totalAssets - totalLiabilities).toFixed(2)),
+      totalDebt: +(debt.toFixed(2)),
+      netDebt: +((debt - cashAndEquivalents - shortTermInvestments).toFixed(2)),
+    };
+  });
+  // Modeled quarterly cash flow with provider/accounting signs preserved
+  // (capital expenditure stays negative).
+  const cashFlowHistory = quarters.map(q => {
+    const operatingCashFlow = netIncomeTTM / 4 * (1.1 + r() * 0.8);
+    const capitalExpenditure = -(revenueTTM / 4) * (0.05 + r() * 0.08);
+    const investingCashFlow = capitalExpenditure - revenueTTM / 4 * r() * 0.05;
+    const financingCashFlow = netIncomeTTM / 4 * (-0.1 + r() * 0.5);
+    return {
+      label: q.label,
+      date: null,
+      fiscalYear: null,
+      period: q.label,
+      operatingCashFlow: +(operatingCashFlow.toFixed(2)),
+      capitalExpenditure: +(capitalExpenditure.toFixed(2)),
+      freeCashFlow: +((operatingCashFlow + capitalExpenditure).toFixed(2)),
+      investingCashFlow: +(investingCashFlow.toFixed(2)),
+      financingCashFlow: +(financingCashFlow.toFixed(2)),
+      netChangeInCash: +((operatingCashFlow + investingCashFlow + financingCashFlow).toFixed(2)),
+      cashAtEndOfPeriod: +(cashSTI * (0.6 + r() * 0.5)).toFixed(2),
+    };
+  });
+  // Modeled annual income history (deterministic; no extra requests). Values
+  // are magnitudes of the modeled quarterly run-rate, not reported figures —
+  // provenance stays explicit via `financialsMode: 'modeled'`.
+  const annual = [2025, 2024].map(year => {
+    const revenue = revenueTTM * (0.86 + r() * 0.2);
+    const netIncome = netIncomeTTM * (0.9 + r() * 0.3);
+    return {
+      label: `FY ${year}`,
+      date: null,
+      fiscalYear: String(year),
+      period: 'FY',
+      revenue: +revenue.toFixed(2),
+      grossProfit: +(revenue * grossMargin).toFixed(2),
+      operatingIncome: +netIncome.toFixed(2),
+      ebitda: +(netIncome * (1.5 + r() * 0.4)).toFixed(2),
+      netIncome: +netIncome.toFixed(2),
+      eps: +(netIncome / shares).toFixed(2),
+      epsDiluted: +(netIncome / shares).toFixed(2),
+      rd: +(rdSpendTTM * (0.9 + r() * 0.2)).toFixed(2),
+    };
+  });
   return {
     symbol: sym,
     provider: 'demo',
+    financialsMode: 'modeled',
+    deliveriesMode: 'modeled',
     asOf: new Date().toISOString().slice(0, 10),
     marketCap,
     peTTM: netIncomeTTM > 0 ? marketCap / netIncomeTTM : null,
@@ -178,6 +250,9 @@ function demoFinancials(sym) {
     deliveriesSim: simDeliveries(sym, sector),
     deliveriesNote: 'deliveries/shipments are modeled estimates, not reported figures',
     history: quarters,
+    balanceHistory,
+    cashFlowHistory,
+    annual,
   };
 }
 

@@ -20,7 +20,7 @@ A Bloomberg-style monitoring terminal for **pure-play EV OEMs and battery manufa
 |---|---|
 | **Live data engine** | WebSocket tick fan-out with auto-reconnect and frame-buffered rendering; REST history/quotes via Polygon.io or FinancialModelingPrep — or a deterministic simulated feed when no keys are set |
 | **Focus chart** | Single and multi-timeframe (D / 4H / 15M) views, ZigZag swing labels (HH/HL/LH/LL), fresh supply/demand zones, draggable Entry/Stop/TP lines with live position sizing (ATR-14 based) |
-| **Analytics cards** | Fundamentals (TTM KPIs, income statement, margins & deliveries), trade journal with backtest metrics (win rate, profit factor, expectancy, equity curve), EV-vs-commodity correlation matrix (30-session returns-based Pearson) |
+| **Analytics cards** | Financials panel with six views — Overview/TTM KPIs, Income Statement (quarterly + annual), Balance Sheet, Cash Flow, reported Growth, Margins & Deliveries — plus a trade journal with backtest metrics (win rate, profit factor, expectancy, equity curve) and an EV-vs-commodity correlation matrix (30-session returns-based Pearson) |
 | **Market overview** | Global ticker tape and table, sector heatmap, sector intraday lines, battery-metals monitor, global session clock |
 | **Alerts** | Price crossings and daily-% change triggers with toast notifications, optional audio chime and a persisted history tray |
 | **Accessibility** | WCAG 2.1 AA oriented — high-contrast colorblind-safe palette (teal/vermillion) toggle, `aria-live` status regions, full keyboard operation (`Tab`, `Enter`, arrows, `Escape`, `/` to search), focus-visible rings |
@@ -37,7 +37,13 @@ npm start
 # open http://localhost:3000
 ```
 
-No API keys are required to try it: without keys the backend runs a deterministic **simulated feed** (the UI labels it `LIVE · SERVER SIM`).
+No API keys are required to try it: without keys the backend runs a deterministic **simulated feed** (the UI badges it **`● SIMULATED ENGINE`**).
+
+### Financials panel
+
+Six views, in order: **Overview** (TTM KPIs and valuation), **Income Statement** with a `QUARTERLY | ANNUAL` toggle (up to five periods each; the annual series is already part of the core fetch, so the toggle costs no extra request), **Balance Sheet** (cash and short-term investments, assets, liabilities, equity, debt and net debt, newest quarter first), **Cash Flow** (operating cash flow, capex, free cash flow, investing/financing flows and net cash movement — accounting signs preserved as reported), **Growth**, and **Margins & Deliveries**.
+
+With an FMP key the panel shows real fundamentals labelled **`FMP · REAL`**; otherwise it falls back to deterministic modeled data labelled **`DEMO · MODELED`**, with deliveries/shipments remaining explicitly modeled estimates (FMP does not provide a deliveries dataset). **Growth** is lazy-loaded reported growth — Revenue, Gross Profit, Operating Income, Net Income and EPS — fetched separately from the normal financial request and cached independently; it is presented as `Reported Growth` (never described as YoY/QoQ) and is not fabricated in modeled mode, where it reports itself unavailable instead.
 
 ## API Key Configuration
 
@@ -50,7 +56,7 @@ cp .env.example .env
 | Variable | Default | Description |
 |---|---|---|
 | `POLYGON_API_KEY` | *(empty)* | Polygon.io REST key. Enables real daily aggregates, intraday 4H/15M bars and snapshot quotes. |
-| `FMP_API_KEY` | *(empty)* | FinancialModelingPrep key. Enables real daily history, batch quotes and fundamentals (key-metrics-TTM, income statements). |
+| `FMP_API_KEY` | *(empty)* | FinancialModelingPrep key. Enables real daily history, per-symbol quotes and fundamentals (key-metrics-TTM, income statements). |
 | `PORT` | `3000` | HTTP + WebSocket listen port. |
 | `HOST` | `127.0.0.1` | Listen address. Loopback by default; set `0.0.0.0` only for intentional LAN/remote access. |
 | `TRADING_API_TOKEN` | *(empty)* | Bearer token required for private/self-hosted trading access. It does **not** override `DISTRIBUTION_MODE=public`, which always disables trading regardless of credentials. |
@@ -72,6 +78,14 @@ The UI reflects this: simulated runs badge **`● SIMULATED ENGINE`** (amber, ne
 ### Free-tier provider keys (Polygon/Massive)
 
 Plans without Snapshot/WebSocket entitlement are supported: when the snapshot endpoint answers `403 NOT_AUTHORIZED`, quotes fall back to one daily-aggregate range request per symbol covering the last completed US trading sessions, and the feed is labelled **`● EOD · PREVIOUS CLOSE`** (`dataMode: "eod"` in `/api/status` and `/api/config`) — never presented as realtime. `change`/`percentChange` are the conventional latest-close vs previous completed close; when only one completed session is available they are `null` rather than substituted with open-to-close movement. The realtime stream is disabled for the session after a single log line instead of reconnecting, and polling continues over REST. Invalid keys (`401`), server errors and malformed responses still surface as errors.
+
+In the free/EOD path all REST traffic shares one quota-aware pacing scheduler: the visible chart's history is prioritised over background board population, duplicate snapshot/quote/history requests are deduplicated, and the market board fills progressively as paced requests complete. Snapshot-entitled (realtime) accounts are not throttled. A numeric price is only labelled `LIVE` when the provider supplies genuinely realtime data; completed-session values stay labelled `● EOD · PREVIOUS CLOSE`, and simulated runs are labelled `● SIMULATED ENGINE`.
+
+### FMP market data & request budgets
+
+When FMP is used as the market-data provider, quotes come from the stable per-symbol endpoint (`/stable/quote`) and daily history from the stable EOD endpoint (`/stable/historical-price-eod/full`, bounded date window); both are cached, and Polygon remains the preferred continuous provider whenever it is configured. FMP plans carry request limits, so caching is deliberate: quotes and history are served from their TTL caches between refreshes.
+
+Quota-aware financial request budget per uncached symbol: **7** FMP requests — profile, quarterly income, annual income, quarterly balance sheet, quarterly cash flow, ratios-TTM and key-metrics-TTM. Financial cache hit = 0 provider calls; financial tab switching = 0; Quarterly/Annual toggle = 0; first Growth view = +1; cached Growth = 0.
 
 ## The `android/` directory and `ANDROID_PERFORMANCE_AUDIT.md`
 
@@ -148,7 +162,8 @@ Data flow: `provider → market-data service (TTL cache) → REST/WS → store �
 | `GET /api/status` | provider mode, WS client count, subscriptions |
 | `GET /api/history/:symbol?timeframe=d\|4h\|15m` | 60 bars of OHLCV |
 | `GET /api/quote/:symbol` | price, change, %change, volume, profile |
-| `GET /api/financials/:symbol` | TTM metrics, statements, modeled deliveries |
+| `GET /api/financials/:symbol` | Normalized FMP fundamentals: overview/TTM metrics, quarterly + annual income, balance sheet, cash flow, margins, and explicitly modeled deliveries |
+| `GET /api/financials/:symbol/growth` | Lazy quarterly reported-growth data with independent caching; unavailable/restricted provider states are normalized |
 
 ### Keyboard
 
@@ -167,4 +182,3 @@ Hardened by default: Helmet headers with CSP, origin-restricted CORS and WebSock
 ## License
 
 [MIT](LICENSE). Third-party packages and their licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-# EVT://TERMINAL

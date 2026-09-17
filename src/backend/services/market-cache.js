@@ -60,6 +60,22 @@ function applyMarketSnapshot(tickers, vehicles) {
   notifyCacheUpdate();
 }
 
+/** Merges a partial batch of provider-backed quotes into the board (paced
+ *  free-tier population): rows not in the batch keep their last known state,
+ *  new symbols are appended. No value is manufactured for missing symbols. */
+function applyQuoteBatch(entries) {
+  if (!Array.isArray(entries) || !entries.length) return;
+  const bySym = new Map(marketCache.tickers.map(t => [t.symbol, t]));
+  for (const e of entries) {
+    const existing = bySym.get(e.symbol);
+    if (existing) Object.assign(existing, e);
+    else { const row = { ...e }; marketCache.tickers.push(row); bySym.set(e.symbol, row); }
+  }
+  marketCache.updatedAt = new Date().toISOString();
+  marketCache.meta.lastError = null;
+  notifyCacheUpdate();
+}
+
 /** Live-tick ingestion: applies a trade tick to the cached ticker and
  *  notifies listeners (throttled to one flush per 250 ms during bursts).
  *  Change is measured against the cached day reference (prevClose) when the
@@ -102,6 +118,7 @@ module.exports = {
   recordFailure,
   markStaleRetained,
   applyMarketSnapshot,
+  applyQuoteBatch,
   ingestLiveTick,
   getCachedMarketData,
 };
