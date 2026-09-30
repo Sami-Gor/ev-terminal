@@ -62,7 +62,7 @@ This project is distributed under the [MIT License](LICENSE) and depends on the 
 | [https-proxy-agent](git://github.com/TooTallNate/node-https-proxy-agent.git) | 5.0.1 | MIT |
 | [iconv-lite](https://github.com/ashtuchkin/iconv-lite) | 0.4.24 | MIT |
 | [inherits](git://github.com/isaacs/inherits) | 2.0.4 | ISC |
-| [ip-address](https://github.com/beaugunderson/ip-address.git) | 10.7.0 | MIT |
+| [ip-address](https://github.com/beaugunderson/ip-address.git) | 10.7.2 | MIT |
 | [ipaddr.js](git://github.com/whitequark/ipaddr.js) | 1.9.1 | MIT |
 | [lilconfig](https://github.com/antonk52/lilconfig) | 3.1.3 | MIT |
 | [math-intrinsics](https://github.com/es-shims/math-intrinsics#readme) | 1.1.0 | MIT |
