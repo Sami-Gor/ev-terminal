@@ -1,0 +1,64 @@
+name: Mirror to GitLab
+
+on:
+  push:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gitlab-mirror
+  cancel-in-progress: false
+
+jobs:
+  mirror:
+    if: github.actor != 'dependabot[bot]' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+
+    runs-on: ubuntu-latest
+
+    env:
+      GITLAB_TOKEN: ${{ secrets.GITLAB_MIRROR_TOKEN }}
+      REPO_NAME: ${{ github.event.repository.name }}
+
+    steps:
+      - name: Clone GitHub repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          git clone --bare \
+            "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            repo.git
+
+      - name: Push branches and tags to GitLab
+        run: |
+          set -euo pipefail
+
+          cd repo.git
+
+          DEST="https://oauth2:${GITLAB_TOKEN}@gitlab.com/Sami-Gor/${REPO_NAME}.git"
+
+          git push "$DEST" 'refs/heads/*:refs/heads/*'
+          git push "$DEST" 'refs/tags/*:refs/tags/*'
+
+      - name: Verify default branch
+        run: |
+          set -euo pipefail
+
+          cd repo.git
+
+          DEST="https://oauth2:${GITLAB_TOKEN}@gitlab.com/Sami-Gor/${REPO_NAME}.git"
+
+          DEFAULT_BRANCH="${{ github.event.repository.default_branch }}"
+
+          SOURCE_SHA="$(git rev-parse "refs/heads/${DEFAULT_BRANCH}")"
+          DEST_SHA="$(git ls-remote "$DEST" "refs/heads/${DEFAULT_BRANCH}" | awk '{print $1}')"
+
+          echo "GitHub ${DEFAULT_BRANCH}: ${SOURCE_SHA}"
+          echo "GitLab ${DEFAULT_BRANCH}: ${DEST_SHA}"
+
+          test "$SOURCE_SHA" = "$DEST_SHA"
